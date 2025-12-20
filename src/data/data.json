@@ -1,0 +1,1663 @@
+{
+    "currentUserId": "me",
+    "appConfig": {
+        "languages": [
+            "English",
+            "Spanish",
+            "French",
+            "German",
+            "Hindi",
+            "Portuguese",
+            "Russian",
+            "Chinese",
+            "Japanese",
+            "Arabic"
+        ],
+        "appColors": [
+            "#008069",
+            "#075E54",
+            "#3b82f6",
+            "#8b5cf6",
+            "#ef4444",
+            "#f97316",
+            "#14b8a6",
+            "#e11d48"
+        ],
+        "bubbleColors": [
+            "#D9FDD3",
+            "#FFFFFF",
+            "#d1e4f9",
+            "#fec5c5",
+            "#e2d5f7",
+            "#ffe4c4",
+            "#ccf2f4",
+            "#202c33",
+            "#005c4b",
+            "#ffffcc"
+        ],
+        "reactions": [
+            "👍",
+            "❤️",
+            "😂",
+            "😮",
+            "😢",
+            "🙏",
+            "🔥",
+            "🎉"
+        ]
+    },
+    "users": {
+        "me": {
+            "id": "me",
+            "name": "You",
+            "avatar": "https://picsum.photos/seed/me/200",
+            "about": "Available",
+            "phone": "+1 234 567 8900",
+            "connectionType": "me"
+        },
+        "u1": {
+            "id": "u1",
+            "name": "Alice Johnson",
+            "avatar": "https://picsum.photos/seed/alice/201",
+            "about": "Busy at work",
+            "phone": "+1 555 0101",
+            "connectionType": "following"
+        },
+        "u2": {
+            "id": "u2",
+            "name": "Bob Smith",
+            "avatar": "https://picsum.photos/seed/bob/202",
+            "about": "At the gym",
+            "phone": "+1 555 0102",
+            "connectionType": "follower"
+        },
+        "u3": {
+            "id": "u3",
+            "name": "Charlie Brown",
+            "avatar": "https://picsum.photos/seed/charlie/203",
+            "about": "Sleeping",
+            "phone": "+1 555 0103",
+            "connectionType": "following"
+        },
+        "u4": {
+            "id": "u4",
+            "name": "Diana Prince",
+            "avatar": "https://picsum.photos/seed/diana/204",
+            "about": "Urgent calls only",
+            "phone": "+1 555 0104",
+            "connectionType": "contact"
+        },
+        "u5": {
+            "id": "u5",
+            "name": "Evan Wright",
+            "avatar": "https://picsum.photos/seed/evan/205",
+            "about": "Battery about to die",
+            "phone": "+1 555 0105",
+            "connectionType": "follower"
+        },
+        "u6": {
+            "id": "u6",
+            "name": "Fiona Gallagher",
+            "avatar": "https://picsum.photos/seed/fiona/206",
+            "about": "Life is good",
+            "phone": "+1 555 0106",
+            "connectionType": "following"
+        },
+        "u7": {
+            "id": "u7",
+            "name": "George Martin",
+            "avatar": "https://picsum.photos/seed/george/207",
+            "about": "Writing...",
+            "phone": "+1 555 0107",
+            "connectionType": "contact"
+        },
+        "u8": {
+            "id": "u8",
+            "name": "Hannah Lee",
+            "avatar": "https://picsum.photos/seed/hannah/208",
+            "about": "In a meeting",
+            "phone": "+1 555 0108",
+            "connectionType": "following"
+        },
+        "u9": {
+            "id": "u9",
+            "name": "Ian Somerhalder",
+            "avatar": "https://picsum.photos/seed/ian/209",
+            "about": "Travel bug ✈️",
+            "phone": "+1 555 0109",
+            "connectionType": "follower"
+        },
+        "u10": {
+            "id": "u10",
+            "name": "Julia Roberts",
+            "avatar": "https://picsum.photos/seed/julia/210",
+            "about": "Movies",
+            "phone": "+1 555 0110",
+            "connectionType": "following"
+        },
+        "u11": {
+            "id": "u11",
+            "name": "Kevin Hart",
+            "avatar": "https://picsum.photos/seed/kevin/211",
+            "about": "Laughing",
+            "phone": "+1 555 0111",
+            "connectionType": "contact"
+        },
+        "u12": {
+            "id": "u12",
+            "name": "Liam Neeson",
+            "avatar": "https://picsum.photos/seed/liam/212",
+            "about": "I will find you",
+            "phone": "+1 555 0112",
+            "connectionType": "follower"
+        },
+        "u13": {
+            "id": "u13",
+            "name": "Monica Bellucci",
+            "avatar": "https://picsum.photos/seed/monica/213",
+            "about": "Ciao",
+            "phone": "+1 555 0113",
+            "connectionType": "following"
+        },
+        "u14": {
+            "id": "u14",
+            "name": "Noah Centineo",
+            "avatar": "https://picsum.photos/seed/noah/214",
+            "about": "Netflix",
+            "phone": "+1 555 0114",
+            "connectionType": "follower"
+        },
+        "u15": {
+            "id": "u15",
+            "name": "Olivia Wilde",
+            "avatar": "https://picsum.photos/seed/olivia/215",
+            "about": "Directing",
+            "phone": "+1 555 0115",
+            "connectionType": "contact"
+        }
+    },
+    "chats": [
+        {
+            "id": "c1",
+            "contactId": "u1",
+            "unreadCount": 2,
+            "isPinned": true,
+            "isMuted": false,
+            "isGroup": false,
+            "timestamp": "2023-10-27T10:00:00.000Z",
+            "lastMessageId": "m1_last"
+        },
+        {
+            "id": "c2",
+            "contactId": "u2",
+            "unreadCount": 0,
+            "isPinned": true,
+            "isMuted": true,
+            "isGroup": false,
+            "timestamp": "2023-10-27T09:00:00.000Z",
+            "lastMessageId": "m2_last"
+        },
+        {
+            "id": "c3",
+            "contactId": "u3",
+            "unreadCount": 5,
+            "isPinned": false,
+            "isMuted": false,
+            "isGroup": false,
+            "timestamp": "2023-10-27T08:00:00.000Z",
+            "lastMessageId": "m3_last"
+        },
+        {
+            "id": "c4",
+            "contactId": "u4",
+            "unreadCount": 0,
+            "isPinned": false,
+            "isMuted": false,
+            "isGroup": false,
+            "timestamp": "2023-10-26T10:00:00.000Z",
+            "lastMessageId": "m4_last"
+        },
+        {
+            "id": "c5",
+            "contactId": "u5",
+            "unreadCount": 0,
+            "isPinned": false,
+            "isMuted": false,
+            "isGroup": true,
+            "groupName": "Weekend Trip",
+            "groupParticipants": [
+                "u5",
+                "u6",
+                "me"
+            ],
+            "timestamp": "2023-10-25T10:00:00.000Z",
+            "lastMessageId": "m5_last"
+        },
+        {
+            "id": "c6",
+            "contactId": "u6",
+            "unreadCount": 1,
+            "isPinned": false,
+            "isMuted": false,
+            "isGroup": false,
+            "timestamp": "2023-10-24T18:30:00.000Z",
+            "lastMessageId": "m6_last"
+        },
+        {
+            "id": "c7",
+            "contactId": "u7",
+            "unreadCount": 0,
+            "isPinned": false,
+            "isMuted": false,
+            "isGroup": false,
+            "timestamp": "2023-10-23T14:15:00.000Z",
+            "lastMessageId": "m7_last"
+        },
+        {
+            "id": "c8",
+            "contactId": "u8",
+            "unreadCount": 0,
+            "isPinned": false,
+            "isMuted": false,
+            "isGroup": false,
+            "timestamp": "2023-10-22T09:45:00.000Z",
+            "lastMessageId": "m8_last"
+        },
+        {
+            "id": "c9",
+            "contactId": "u9",
+            "unreadCount": 0,
+            "isPinned": false,
+            "isMuted": false,
+            "isGroup": false,
+            "timestamp": "2023-10-21T21:00:00.000Z",
+            "lastMessageId": "m9_last"
+        },
+        {
+            "id": "c10",
+            "contactId": "u10",
+            "unreadCount": 0,
+            "isPinned": false,
+            "isMuted": false,
+            "isGroup": false,
+            "timestamp": "2023-10-20T11:20:00.000Z",
+            "lastMessageId": "m10_last"
+        },
+        {
+            "id": "c11",
+            "contactId": "u11",
+            "unreadCount": 0,
+            "isPinned": false,
+            "isMuted": false,
+            "isGroup": false,
+            "timestamp": "2023-10-19T16:50:00.000Z",
+            "lastMessageId": "m11_last"
+        },
+        {
+            "id": "c12",
+            "contactId": "u12",
+            "unreadCount": 0,
+            "isPinned": false,
+            "isMuted": false,
+            "isGroup": false,
+            "timestamp": "2023-10-18T13:00:00.000Z",
+            "lastMessageId": "m12_last"
+        },
+        {
+            "id": "c13",
+            "contactId": "u13",
+            "unreadCount": 0,
+            "isPinned": false,
+            "isMuted": false,
+            "isGroup": false,
+            "timestamp": "2023-10-17T08:30:00.000Z",
+            "lastMessageId": "m13_last"
+        },
+        {
+            "id": "c14",
+            "contactId": "u14",
+            "unreadCount": 0,
+            "isPinned": false,
+            "isMuted": false,
+            "isGroup": false,
+            "timestamp": "2023-10-16T20:15:00.000Z",
+            "lastMessageId": "m14_last"
+        },
+        {
+            "id": "c15",
+            "contactId": "u15",
+            "unreadCount": 0,
+            "isPinned": false,
+            "isMuted": false,
+            "isGroup": false,
+            "timestamp": "2023-10-15T12:00:00.000Z",
+            "lastMessageId": "m15_last"
+        }
+    ],
+    "messages": {
+        "c1": [
+            {
+                "id": "m1_jan_1",
+                "chatId": "c1",
+                "senderId": "u1",
+                "text": "Happy New Year! 🎆 Hoping 2023 is amazing for us.",
+                "timestamp": "2023-01-01T00:05:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m1_jan_2",
+                "chatId": "c1",
+                "senderId": "me",
+                "text": "Happy New Year Alice! 🎉 Let's catch up soon.",
+                "timestamp": "2023-01-01T00:10:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m1_feb_1",
+                "chatId": "c1",
+                "senderId": "u1",
+                "text": "Are you free for coffee next week?",
+                "timestamp": "2023-02-14T10:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m1_feb_2",
+                "chatId": "c1",
+                "senderId": "me",
+                "text": "Yes! Tuesday works perfectly.",
+                "timestamp": "2023-02-14T10:05:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m1_mar_1",
+                "chatId": "c1",
+                "senderId": "u1",
+                "text": "Check out this document for the project.",
+                "timestamp": "2023-03-05T14:30:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m1_mar_2",
+                "chatId": "c1",
+                "senderId": "u1",
+                "text": "Project_Brief_v2.pdf",
+                "timestamp": "2023-03-05T14:31:00.000Z",
+                "status": "read",
+                "type": "text",
+                "isPinned": true
+            },
+            {
+                "id": "m1_apr_1",
+                "chatId": "c1",
+                "senderId": "u1",
+                "text": "Look at this cute dog I saw today!",
+                "timestamp": "2023-04-10T14:30:00.000Z",
+                "status": "read",
+                "type": "image",
+                "mediaUrl": "https://picsum.photos/seed/dog/400/300"
+            },
+            {
+                "id": "m1_apr_2",
+                "chatId": "c1",
+                "senderId": "me",
+                "text": "Omg adorable 😍",
+                "timestamp": "2023-04-10T14:32:00.000Z",
+                "status": "read",
+                "type": "text",
+                "reactions": {
+                    "u1": "❤️"
+                }
+            },
+            {
+                "id": "m1_may_1",
+                "chatId": "c1",
+                "senderId": "u1",
+                "text": "I'm thinking of visiting Italy in the summer.",
+                "timestamp": "2023-05-20T09:15:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m1_may_2",
+                "chatId": "c1",
+                "senderId": "me",
+                "text": "That sounds amazing! You should go to Florence.",
+                "timestamp": "2023-05-20T09:20:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m1_jun_1",
+                "chatId": "c1",
+                "senderId": "u1",
+                "text": "🎤 Voice message (1:20)",
+                "timestamp": "2023-06-12T18:00:00.000Z",
+                "status": "read",
+                "type": "voice",
+                "duration": "1:20"
+            },
+            {
+                "id": "m1_jul_1",
+                "chatId": "c1",
+                "senderId": "me",
+                "text": "Did you book the tickets?",
+                "timestamp": "2023-07-05T11:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m1_aug_1",
+                "chatId": "c1",
+                "senderId": "u1",
+                "text": "Happy Birthday!! 🎂🎁",
+                "timestamp": "2023-08-15T08:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m1_sep_1",
+                "chatId": "c1",
+                "senderId": "u1",
+                "text": "Check out these photos from my trip!",
+                "timestamp": "2023-09-15T18:00:00.000Z",
+                "status": "read",
+                "type": "image",
+                "mediaUrls": [
+                    "https://picsum.photos/seed/italy1/400/300",
+                    "https://picsum.photos/seed/italy2/400/300",
+                    "https://picsum.photos/seed/italy3/400/300"
+                ]
+            },
+            {
+                "id": "m1_oct_1",
+                "chatId": "c1",
+                "senderId": "u1",
+                "text": "Hey, are we still on for lunch today?",
+                "timestamp": "2023-10-27T09:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m1_oct_2",
+                "chatId": "c1",
+                "senderId": "me",
+                "text": "Yes, definitely! 1 PM?",
+                "timestamp": "2023-10-27T09:05:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m1_media",
+                "chatId": "c1",
+                "senderId": "u1",
+                "text": "Just arrived at the spot.",
+                "timestamp": "2023-10-27T09:58:00.000Z",
+                "status": "read",
+                "type": "image",
+                "mediaUrl": "https://picsum.photos/seed/cafe/400/300"
+            },
+            {
+                "id": "m1_last",
+                "chatId": "c1",
+                "senderId": "u1",
+                "text": "I grabbed a table near the window.",
+                "timestamp": "2023-10-27T10:00:00.000Z",
+                "status": "delivered",
+                "type": "text"
+            }
+        ],
+        "c2": [
+            {
+                "id": "m2_jan_1",
+                "chatId": "c2",
+                "senderId": "me",
+                "text": "New year new gains! Let's hit the gym.",
+                "timestamp": "2023-01-02T07:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m2_jan_2",
+                "chatId": "c2",
+                "senderId": "u2",
+                "text": "I'm down. Leg day today?",
+                "timestamp": "2023-01-02T07:05:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m2_feb_1",
+                "chatId": "c2",
+                "senderId": "u2",
+                "text": "Running late, start without me.",
+                "timestamp": "2023-02-20T17:30:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m2_mar_1",
+                "chatId": "c2",
+                "senderId": "u2",
+                "text": "Can't make it today, stuck at work.",
+                "timestamp": "2023-03-15T17:30:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m2_apr_1",
+                "chatId": "c2",
+                "senderId": "me",
+                "text": "No worries. See you Friday.",
+                "timestamp": "2023-03-15T17:35:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m2_may_1",
+                "chatId": "c2",
+                "senderId": "u2",
+                "text": "Look at this progress!",
+                "timestamp": "2023-05-10T08:00:00.000Z",
+                "status": "read",
+                "type": "image",
+                "mediaUrl": "https://picsum.photos/seed/gym/400/300"
+            },
+            {
+                "id": "m2_jun_1",
+                "chatId": "c2",
+                "senderId": "u2",
+                "text": "Check out this new protein shake.",
+                "timestamp": "2023-06-10T12:00:00.000Z",
+                "status": "read",
+                "type": "image",
+                "mediaUrl": "https://picsum.photos/seed/protein/400/500"
+            },
+            {
+                "id": "m2_jul_1",
+                "chatId": "c2",
+                "senderId": "me",
+                "text": "Looks good, where did you get it?",
+                "timestamp": "2023-06-10T12:05:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m2_aug_1",
+                "chatId": "c2",
+                "senderId": "u2",
+                "text": "Gym closed for renovation next week.",
+                "timestamp": "2023-08-20T09:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m2_sep_1",
+                "chatId": "c2",
+                "senderId": "me",
+                "text": "Okay, we can run in the park.",
+                "timestamp": "2023-08-20T09:05:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m2_oct_1",
+                "chatId": "c2",
+                "senderId": "me",
+                "text": "Did you see the new gym schedule?",
+                "timestamp": "2023-10-27T07:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m2_last",
+                "chatId": "c2",
+                "senderId": "u2",
+                "text": "Yeah, looks tough for Tuesday.",
+                "timestamp": "2023-10-27T09:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            }
+        ],
+        "c3": [
+            {
+                "id": "m3_jan_1",
+                "chatId": "c3",
+                "senderId": "u3",
+                "text": "Happy New Year buddy!",
+                "timestamp": "2023-01-01T01:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m3_feb_1",
+                "chatId": "c3",
+                "senderId": "u3",
+                "text": "Dude you have to see this video 😂",
+                "timestamp": "2023-02-01T20:00:00.000Z",
+                "status": "read",
+                "type": "video",
+                "mediaUrl": "https://picsum.photos/seed/video1/400/300",
+                "duration": "0:45"
+            },
+            {
+                "id": "m3_feb_2",
+                "chatId": "c3",
+                "senderId": "me",
+                "text": "Hahaha that's hilarious!",
+                "timestamp": "2023-02-01T20:02:00.000Z",
+                "status": "read",
+                "type": "text",
+                "reactions": {
+                    "u3": "😂"
+                }
+            },
+            {
+                "id": "m3_mar_1",
+                "chatId": "c3",
+                "senderId": "u3",
+                "text": "Game night this Friday?",
+                "timestamp": "2023-03-10T15:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m3_apr_1",
+                "chatId": "c3",
+                "senderId": "u3",
+                "text": "Look at this new setup.",
+                "timestamp": "2023-04-05T18:00:00.000Z",
+                "status": "read",
+                "type": "image",
+                "mediaUrl": "https://picsum.photos/seed/gaming/400/300"
+            },
+            {
+                "id": "m3_may_1",
+                "chatId": "c3",
+                "senderId": "u3",
+                "text": "🎤 Story time...",
+                "timestamp": "2023-05-12T14:00:00.000Z",
+                "status": "read",
+                "type": "voice",
+                "duration": "1:20"
+            },
+            {
+                "id": "m3_jun_1",
+                "chatId": "c3",
+                "senderId": "u3",
+                "text": "Are we gaming tonight?",
+                "timestamp": "2023-06-05T19:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m3_jul_1",
+                "chatId": "c3",
+                "senderId": "me",
+                "text": "Can't tonight, busy with work.",
+                "timestamp": "2023-06-05T19:05:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m3_aug_1",
+                "chatId": "c3",
+                "senderId": "u3",
+                "text": "Check out this meme.",
+                "timestamp": "2023-08-22T21:00:00.000Z",
+                "status": "read",
+                "type": "image",
+                "mediaUrl": "https://picsum.photos/seed/meme/400/400"
+            },
+            {
+                "id": "m3_sep_1",
+                "chatId": "c3",
+                "senderId": "u3",
+                "text": "New game released!",
+                "timestamp": "2023-09-20T10:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m3_last",
+                "chatId": "c3",
+                "senderId": "u3",
+                "text": "🎤 Voice message (0:15)",
+                "timestamp": "2023-10-27T08:00:00.000Z",
+                "status": "delivered",
+                "type": "voice",
+                "duration": "0:15"
+            }
+        ],
+        "c4": [
+            {
+                "id": "m4_jan_1",
+                "chatId": "c4",
+                "senderId": "u4",
+                "text": "Here is the contract for review.",
+                "timestamp": "2023-01-20T09:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m4_jan_2",
+                "chatId": "c4",
+                "senderId": "u4",
+                "text": "Contract_v1.pdf",
+                "timestamp": "2023-01-20T09:01:00.000Z",
+                "status": "read",
+                "type": "text",
+                "isPinned": true
+            },
+            {
+                "id": "m4_feb_1",
+                "chatId": "c4",
+                "senderId": "me",
+                "text": "Received, will take a look.",
+                "timestamp": "2023-01-20T09:10:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m4_mar_1",
+                "chatId": "c4",
+                "senderId": "u4",
+                "text": "Please sign the NDA.",
+                "timestamp": "2023-03-10T10:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m4_apr_1",
+                "chatId": "c4",
+                "senderId": "u4",
+                "text": "Meeting moved to 3 PM.",
+                "timestamp": "2023-04-15T11:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m4_may_1",
+                "chatId": "c4",
+                "senderId": "u4",
+                "text": "Q1 Report attached.",
+                "timestamp": "2023-05-20T09:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m4_jun_1",
+                "chatId": "c4",
+                "senderId": "u4",
+                "text": "Can we schedule a call?",
+                "timestamp": "2023-06-25T14:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m4_jul_1",
+                "chatId": "c4",
+                "senderId": "u4",
+                "text": "Project Greenlight is approved!",
+                "timestamp": "2023-08-01T15:30:00.000Z",
+                "status": "read",
+                "type": "text",
+                "reactions": {
+                    "me": "👍"
+                }
+            },
+            {
+                "id": "m4_sep_1",
+                "chatId": "c4",
+                "senderId": "u4",
+                "text": "Urgent: Client feedback.",
+                "timestamp": "2023-09-15T09:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m4_last",
+                "chatId": "c4",
+                "senderId": "me",
+                "text": "Sent you the final files.",
+                "timestamp": "2023-10-26T10:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            }
+        ],
+        "c5": [
+            {
+                "id": "m5_jun_1",
+                "chatId": "c5",
+                "senderId": "system",
+                "text": "You created group \"Weekend Trip\"",
+                "timestamp": "2023-06-01T10:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m5_jun_2",
+                "chatId": "c5",
+                "senderId": "me",
+                "text": "Hey guys, planning a trip for July!",
+                "timestamp": "2023-06-01T10:05:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m5_jun_3",
+                "chatId": "c5",
+                "senderId": "u5",
+                "text": "I'm in!",
+                "timestamp": "2023-06-01T10:10:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m5_jun_4",
+                "chatId": "c5",
+                "senderId": "u6",
+                "text": "Me too. Where are we going?",
+                "timestamp": "2023-06-01T10:15:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m5_jun_5",
+                "chatId": "c5",
+                "senderId": "me",
+                "text": "Thinking of the lake house.",
+                "timestamp": "2023-06-02T09:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m5_jul_1",
+                "chatId": "c5",
+                "senderId": "u5",
+                "text": "Booked the cabin.",
+                "timestamp": "2023-07-10T14:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m5_aug_1",
+                "chatId": "c5",
+                "senderId": "u6",
+                "text": "Here are the photos!",
+                "timestamp": "2023-08-05T12:00:00.000Z",
+                "status": "read",
+                "type": "image",
+                "mediaUrls": [
+                    "https://picsum.photos/seed/trip1/400/300",
+                    "https://picsum.photos/seed/trip2/400/300"
+                ]
+            },
+            {
+                "id": "m5_sep_1",
+                "chatId": "c5",
+                "senderId": "me",
+                "text": "That was fun, we should do it again.",
+                "timestamp": "2023-09-01T10:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m5_last",
+                "chatId": "c5",
+                "senderId": "u5",
+                "text": "Who is bringing the snacks for this weekend?",
+                "timestamp": "2023-10-25T10:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            }
+        ],
+        "c6": [
+            {
+                "id": "m6_feb_1",
+                "chatId": "c6",
+                "senderId": "u6",
+                "text": "Hey long time no see!",
+                "timestamp": "2023-02-10T11:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m6_mar_1",
+                "chatId": "c6",
+                "senderId": "u6",
+                "text": "Happy birthday Fiona! 🎈",
+                "timestamp": "2023-03-12T08:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m6_mar_2",
+                "chatId": "c6",
+                "senderId": "u6",
+                "text": "Thanks!! We should catch up soon.",
+                "timestamp": "2023-03-12T09:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m6_may_1",
+                "chatId": "c6",
+                "senderId": "u6",
+                "text": "Are you going to the concert?",
+                "timestamp": "2023-05-15T10:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m6_jul_1",
+                "chatId": "c6",
+                "senderId": "me",
+                "text": "Yes, got the tickets.",
+                "timestamp": "2023-05-15T10:05:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m6_sep_1",
+                "chatId": "c6",
+                "senderId": "u6",
+                "text": "Concert was amazing!",
+                "timestamp": "2023-09-01T23:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m6_last",
+                "chatId": "c6",
+                "senderId": "u6",
+                "text": "Life is good ☀️",
+                "timestamp": "2023-10-24T18:30:00.000Z",
+                "status": "read",
+                "type": "text"
+            }
+        ],
+        "c7": [
+            {
+                "id": "m7_jan_1",
+                "chatId": "c7",
+                "senderId": "u7",
+                "text": "Happy New Year!",
+                "timestamp": "2023-01-01T12:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m7_feb_1",
+                "chatId": "c7",
+                "senderId": "u7",
+                "text": "How is the book coming along?",
+                "timestamp": "2023-02-20T10:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m7_feb_2",
+                "chatId": "c7",
+                "senderId": "u7",
+                "text": "Slowly but surely. Still writing.",
+                "timestamp": "2023-02-20T10:05:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m7_apr_1",
+                "chatId": "c7",
+                "senderId": "u7",
+                "text": "Chapter 5 is done.",
+                "timestamp": "2023-04-10T15:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m7_jun_1",
+                "chatId": "c7",
+                "senderId": "u7",
+                "text": "Need feedback on this paragraph.",
+                "timestamp": "2023-06-15T14:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m7_aug_1",
+                "chatId": "c7",
+                "senderId": "u7",
+                "text": "Almost finished.",
+                "timestamp": "2023-08-25T11:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m7_last",
+                "chatId": "c7",
+                "senderId": "u7",
+                "text": "Sent you the draft chapter.",
+                "timestamp": "2023-10-23T14:15:00.000Z",
+                "status": "read",
+                "type": "text"
+            }
+        ],
+        "c8": [
+            {
+                "id": "m8_jan_1",
+                "chatId": "c8",
+                "senderId": "u8",
+                "text": "Meeting at 10?",
+                "timestamp": "2023-01-10T09:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m8_mar_1",
+                "chatId": "c8",
+                "senderId": "me",
+                "text": "Are you free for a call?",
+                "timestamp": "2023-05-05T15:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m8_mar_2",
+                "chatId": "c8",
+                "senderId": "u8",
+                "text": "In a meeting, will call you back.",
+                "timestamp": "2023-05-05T15:01:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m8_jun_1",
+                "chatId": "c8",
+                "senderId": "u8",
+                "text": "Can you review this slide?",
+                "timestamp": "2023-06-20T11:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m8_aug_1",
+                "chatId": "c8",
+                "senderId": "u8",
+                "text": "Great job on the presentation.",
+                "timestamp": "2023-08-15T16:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m8_last",
+                "chatId": "c8",
+                "senderId": "u8",
+                "text": "Can we reschedule to next week?",
+                "timestamp": "2023-10-22T09:45:00.000Z",
+                "status": "read",
+                "type": "text"
+            }
+        ],
+        "c9": [
+            {
+                "id": "m9_jan_1",
+                "chatId": "c9",
+                "senderId": "u9",
+                "text": "Bali was incredible!",
+                "timestamp": "2023-01-30T20:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m9_jan_2",
+                "chatId": "c9",
+                "senderId": "u9",
+                "text": "Check this view.",
+                "timestamp": "2023-01-30T20:01:00.000Z",
+                "status": "read",
+                "type": "image",
+                "mediaUrl": "https://picsum.photos/seed/bali/400/300"
+            },
+            {
+                "id": "m9_mar_1",
+                "chatId": "c9",
+                "senderId": "u9",
+                "text": "Next stop: Paris.",
+                "timestamp": "2023-03-20T10:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m9_may_1",
+                "chatId": "c9",
+                "senderId": "u9",
+                "text": "Eiffel Tower selfie!",
+                "timestamp": "2023-05-15T12:00:00.000Z",
+                "status": "read",
+                "type": "image",
+                "mediaUrl": "https://picsum.photos/seed/paris/400/300"
+            },
+            {
+                "id": "m9_jul_1",
+                "chatId": "c9",
+                "senderId": "u9",
+                "text": "Back home for a bit.",
+                "timestamp": "2023-07-10T09:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m9_sep_1",
+                "chatId": "c9",
+                "senderId": "u9",
+                "text": "Planning the next adventure.",
+                "timestamp": "2023-09-01T15:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m9_last",
+                "chatId": "c9",
+                "senderId": "u9",
+                "text": "Off to Japan next month! ✈️",
+                "timestamp": "2023-10-21T21:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            }
+        ],
+        "c10": [
+            {
+                "id": "m10_feb_1",
+                "chatId": "c10",
+                "senderId": "u10",
+                "text": "Did you see the Oscars?",
+                "timestamp": "2023-02-28T09:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m10_apr_1",
+                "chatId": "c10",
+                "senderId": "me",
+                "text": "Did you see that new movie?",
+                "timestamp": "2023-04-12T19:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m10_apr_2",
+                "chatId": "c10",
+                "senderId": "u10",
+                "text": "Yes! It was fantastic.",
+                "timestamp": "2023-04-12T19:05:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m10_jun_1",
+                "chatId": "c10",
+                "senderId": "u10",
+                "text": "Cinema on Friday?",
+                "timestamp": "2023-06-23T16:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m10_aug_1",
+                "chatId": "c10",
+                "senderId": "u10",
+                "text": "Loved the ending.",
+                "timestamp": "2023-08-10T22:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m10_last",
+                "chatId": "c10",
+                "senderId": "u10",
+                "text": "Movie night at my place Friday?",
+                "timestamp": "2023-10-20T11:20:00.000Z",
+                "status": "read",
+                "type": "text"
+            }
+        ],
+        "c11": [
+            {
+                "id": "m11_mar_1",
+                "chatId": "c11",
+                "senderId": "u11",
+                "text": "Joke of the day...",
+                "timestamp": "2023-03-01T10:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m11_may_1",
+                "chatId": "c11",
+                "senderId": "u11",
+                "text": "😂😂😂",
+                "timestamp": "2023-05-25T14:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m11_jun_1",
+                "chatId": "c11",
+                "senderId": "me",
+                "text": "That was a good one.",
+                "timestamp": "2023-05-25T14:05:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m11_aug_1",
+                "chatId": "c11",
+                "senderId": "u11",
+                "text": "Going on tour!",
+                "timestamp": "2023-08-20T12:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m11_last",
+                "chatId": "c11",
+                "senderId": "u11",
+                "text": "You won't believe what just happened.",
+                "timestamp": "2023-10-19T16:50:00.000Z",
+                "status": "read",
+                "type": "text"
+            }
+        ],
+        "c12": [
+            {
+                "id": "m12_feb_1",
+                "chatId": "c12",
+                "senderId": "u12",
+                "text": "I have a particular set of skills.",
+                "timestamp": "2023-02-10T08:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m12_apr_1",
+                "chatId": "c12",
+                "senderId": "u12",
+                "text": "Searching...",
+                "timestamp": "2023-04-15T10:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m12_jun_1",
+                "chatId": "c12",
+                "senderId": "u12",
+                "text": "Getting close.",
+                "timestamp": "2023-06-20T12:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m12_aug_1",
+                "chatId": "c12",
+                "senderId": "u12",
+                "text": "Target acquired.",
+                "timestamp": "2023-08-30T14:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m12_last",
+                "chatId": "c12",
+                "senderId": "u12",
+                "text": "Found it.",
+                "timestamp": "2023-10-18T13:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            }
+        ],
+        "c13": [
+            {
+                "id": "m13_mar_1",
+                "chatId": "c13",
+                "senderId": "u13",
+                "text": "Ciao bella!",
+                "timestamp": "2023-03-01T10:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m13_may_1",
+                "chatId": "c13",
+                "senderId": "u13",
+                "text": "Coffee in Rome?",
+                "timestamp": "2023-05-10T09:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m13_jul_1",
+                "chatId": "c13",
+                "senderId": "u13",
+                "text": "Ciao!",
+                "timestamp": "2023-07-01T10:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m13_sep_1",
+                "chatId": "c13",
+                "senderId": "u13",
+                "text": "See you in Paris.",
+                "timestamp": "2023-09-15T11:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m13_last",
+                "chatId": "c13",
+                "senderId": "u13",
+                "text": "Are you coming to Milan Fashion Week?",
+                "timestamp": "2023-10-17T08:30:00.000Z",
+                "status": "read",
+                "type": "text"
+            }
+        ],
+        "c14": [
+            {
+                "id": "m14_mar_1",
+                "chatId": "c14",
+                "senderId": "u14",
+                "text": "Netflix and chill?",
+                "timestamp": "2023-03-03T20:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m14_may_1",
+                "chatId": "c14",
+                "senderId": "u14",
+                "text": "Filming starts tomorrow.",
+                "timestamp": "2023-05-10T08:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m14_jul_1",
+                "chatId": "c14",
+                "senderId": "u14",
+                "text": "On set.",
+                "timestamp": "2023-07-20T12:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m14_sep_1",
+                "chatId": "c14",
+                "senderId": "u14",
+                "text": "Trailer is out!",
+                "timestamp": "2023-09-25T16:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m14_last",
+                "chatId": "c14",
+                "senderId": "u14",
+                "text": "New season just dropped.",
+                "timestamp": "2023-10-16T20:15:00.000Z",
+                "status": "read",
+                "type": "text"
+            }
+        ],
+        "c15": [
+            {
+                "id": "m15_apr_1",
+                "chatId": "c15",
+                "senderId": "u15",
+                "text": "Action!",
+                "timestamp": "2023-04-15T09:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m15_jun_1",
+                "chatId": "c15",
+                "senderId": "u15",
+                "text": "Cut! Good take.",
+                "timestamp": "2023-06-10T11:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m15_aug_1",
+                "chatId": "c15",
+                "senderId": "u15",
+                "text": "Editing room.",
+                "timestamp": "2023-08-05T14:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m15_oct_1",
+                "chatId": "c15",
+                "senderId": "u15",
+                "text": "Premiere night.",
+                "timestamp": "2023-10-01T19:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            },
+            {
+                "id": "m15_last",
+                "chatId": "c15",
+                "senderId": "u15",
+                "text": "That's a wrap.",
+                "timestamp": "2023-10-15T12:00:00.000Z",
+                "status": "read",
+                "type": "text"
+            }
+        ]
+    },
+    "calls": [
+        {
+            "id": "call1",
+            "contactId": "u1",
+            "type": "voice",
+            "direction": "incoming",
+            "timestamp": "2023-10-27T09:50:00.000Z",
+            "duration": "5 min"
+        },
+        {
+            "id": "call2",
+            "contactId": "u2",
+            "type": "video",
+            "direction": "missed",
+            "timestamp": "2023-10-27T09:30:00.000Z"
+        },
+        {
+            "id": "call3",
+            "contactId": "u3",
+            "type": "voice",
+            "direction": "outgoing",
+            "timestamp": "2023-10-27T08:30:00.000Z",
+            "duration": "12 min"
+        },
+        {
+            "id": "call4",
+            "contactId": "u1",
+            "type": "video",
+            "direction": "incoming",
+            "timestamp": "2023-10-26T10:00:00.000Z",
+            "duration": "2 min"
+        },
+        {
+            "id": "call5",
+            "contactId": "u5",
+            "type": "voice",
+            "direction": "outgoing",
+            "timestamp": "2023-08-15T14:00:00.000Z",
+            "duration": "30 min"
+        },
+        {
+            "id": "call6",
+            "contactId": "u9",
+            "type": "video",
+            "direction": "missed",
+            "timestamp": "2023-05-20T21:00:00.000Z"
+        }
+    ],
+    "statusUpdates": [
+        {
+            "id": "s1",
+            "userId": "u1",
+            "timestamp": "2023-10-27T09:00:00.000Z",
+            "viewed": false,
+            "imageUrl": "https://picsum.photos/seed/s1/400/800",
+            "caption": "Morning coffee ☕"
+        },
+        {
+            "id": "s2",
+            "userId": "u3",
+            "timestamp": "2023-10-27T08:00:00.000Z",
+            "viewed": false,
+            "imageUrl": "https://picsum.photos/seed/s2/400/800",
+            "caption": "Gym time!"
+        },
+        {
+            "id": "s3",
+            "userId": "u4",
+            "timestamp": "2023-10-27T07:00:00.000Z",
+            "viewed": true,
+            "imageUrl": "https://picsum.photos/seed/s3/400/800"
+        },
+        {
+            "id": "s4",
+            "userId": "u5",
+            "timestamp": "2023-10-27T06:00:00.000Z",
+            "viewed": true,
+            "imageUrl": "https://picsum.photos/seed/s4/400/800",
+            "caption": "Beautiful sunrise"
+        }
+    ],
+    "channels": [
+        {
+            "id": "c1",
+            "name": "WhatsApp",
+            "followers": "108M followers",
+            "avatar": "https://upload.wikimedia.org/wikipedia/commons/thumb/6/6b/WhatsApp.svg/1200px-WhatsApp.svg.png",
+            "isVerified": true
+        },
+        {
+            "id": "c2",
+            "name": "Real Madrid",
+            "followers": "48M followers",
+            "avatar": "https://upload.wikimedia.org/wikipedia/en/thumb/5/56/Real_Madrid_CF.svg/1200px-Real_Madrid_CF.svg.png",
+            "isVerified": true
+        },
+        {
+            "id": "c3",
+            "name": "Netflix",
+            "followers": "33M followers",
+            "avatar": "https://upload.wikimedia.org/wikipedia/commons/0/08/Netflix_2015_logo.svg",
+            "isVerified": true
+        },
+        {
+            "id": "c4",
+            "name": "FC Barcelona",
+            "followers": "30M followers",
+            "avatar": "https://upload.wikimedia.org/wikipedia/en/thumb/4/47/FC_Barcelona_%28crest%29.svg/1200px-FC_Barcelona_%28crest%29.svg.png",
+            "isVerified": true
+        },
+        {
+            "id": "c5",
+            "name": "Bad Bunny",
+            "followers": "18M followers",
+            "avatar": "https://picsum.photos/seed/bunny/200",
+            "isVerified": true
+        },
+        {
+            "id": "c6",
+            "name": "Nat Geo",
+            "followers": "12M followers",
+            "avatar": "https://picsum.photos/seed/geo/200",
+            "isVerified": true
+        }
+    ],
+    "chatDocuments": {
+        "c1": [
+            {
+                "id": "d1",
+                "name": "Project_Proposal_v2.pdf",
+                "size": "2.4 MB",
+                "date": "Yesterday",
+                "type": "pdf"
+            },
+            {
+                "id": "d2",
+                "name": "Q4_Financials.xlsx",
+                "size": "1.1 MB",
+                "date": "Oct 24",
+                "type": "xls"
+            }
+        ],
+        "c4": [
+            {
+                "id": "d3",
+                "name": "Contract_v1.pdf",
+                "size": "1.5 MB",
+                "date": "Oct 20",
+                "type": "pdf"
+            },
+            {
+                "id": "d4",
+                "name": "NDA_Signed.pdf",
+                "size": "840 KB",
+                "date": "Oct 15",
+                "type": "pdf"
+            }
+        ]
+    },
+    "gameConfig": {
+        "snakeAndLadders": {
+            "snakes": {
+                "16": 6,
+                "47": 26,
+                "49": 11,
+                "56": 53,
+                "62": 19,
+                "64": 60,
+                "87": 24,
+                "93": 73,
+                "95": 75,
+                "98": 78
+            },
+            "ladders": {
+                "1": 38,
+                "4": 14,
+                "9": 31,
+                "21": 42,
+                "28": 84,
+                "36": 44,
+                "51": 67,
+                "71": 91,
+                "80": 100
+            }
+        },
+        "ludo": {
+            "safeZones": [
+                1,
+                9,
+                14,
+                22,
+                27,
+                35,
+                40,
+                48,
+                52
+            ]
+        }
+    }
+}

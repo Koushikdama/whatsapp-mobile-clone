@@ -1,0 +1,39 @@
+{
+  "rules": {
+    "messages": {
+      "$chatId": {
+        ".read": "auth != null",
+        ".write": "auth != null",
+        "$messageId": {
+          ".validate": "newData.hasChildren(['id', 'chatId', 'senderId', 'text', 'timestamp', 'status', 'type'])"
+        }
+      }
+    },
+    "typing": {
+      "$chatId": {
+        ".read": "auth != null",
+        "$userId": {
+          ".write": "auth != null && auth.uid == $userId"
+        }
+      }
+    },
+    "onlineStatus": {
+      "$userId": {
+        ".read": "auth != null",
+        ".write": "auth != null && auth.uid == $userId"
+      }
+    },
+    "activeGames": {
+      "$gameId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    },
+    "gameRooms": {
+      "$roomId": {
+        ".read": "auth != null",
+        ".write": "auth != null"
+      }
+    }
+  }
+}

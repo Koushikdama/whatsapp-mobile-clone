@@ -1,0 +1,7 @@
+{
+  "name": "WhatsApp MOBILE Clone",
+  "description": "A pixel-perfect, mobile-first replica of the WhatsApp UI featuring Chat, Status, and Calls tabs, responsive desktop layout, and interactive message threads using React and Tailwind CSS.",
+  "requestFramePermissions": [
+    "geolocation"
+  ]
+}

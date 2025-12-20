@@ -1,0 +1,114 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // Helper functions
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+    
+    function isOwner(userId) {
+      return isAuthenticated() && request.auth.uid == userId;
+    }
+    
+    function isParticipant(participants) {
+      return isAuthenticated() && request.auth.uid in participants;
+    }
+    
+    // Users collection
+    match /users/{userId} {
+      // Anyone can read user profiles (for chat participant info)
+      allow read: if isAuthenticated();
+      
+      // Users can only create/update their own profile
+      allow create: if isOwner(userId);
+      allow update: if isOwner(userId);
+      
+      // Users cannot delete their own profile (use Firebase Auth for that)
+      allow delete: if false;
+    }
+    
+    // Chats collection
+    match /chats/{chatId} {
+      // Can read if you're a participant
+      allow read: if isAuthenticated() && 
+                     isParticipant(resource.data.participants);
+      
+      // Can create if you're in the participants list
+      allow create: if isAuthenticated() && 
+                       isParticipant(request.resource.data.participants);
+      
+      // Can update if you're a participant
+      allow update: if isAuthenticated() && 
+                       isParticipant(resource.data.participants);
+      
+      // Can delete if you're the creator or owner
+      allow delete: if isAuthenticated() && 
+                       (resource.data.createdBy == request.auth.uid ||
+                        resource.data.groupRoles[request.auth.uid] == 'owner');
+      
+      // User-specific chat settings subcollection
+      match /userSettings/{userId} {
+        allow read: if isOwner(userId);
+        allow write: if isOwner(userId);
+      }
+    }
+    
+    // Calls collection
+    match /calls/{callId} {
+      // Can read own calls
+      allow read: if isAuthenticated() && 
+                     resource.data.userId == request.auth.uid;
+      
+      // Can create own calls
+      allow create: if isAuthenticated() && 
+                       request.resource.data.userId == request.auth.uid;
+      
+      // Can update own calls
+      allow update: if isAuthenticated() && 
+                       resource.data.userId == request.auth.uid;
+      
+      // Can delete own calls
+      allow delete: if isAuthenticated() && 
+                       resource.data.userId == request.auth.uid;
+    }
+    
+    // Status updates collection
+    match /statusUpdates/{statusId} {
+      // Can read if not expired and privacy allows
+      // Simplified: anyone authenticated can read
+      allow read: if isAuthenticated();
+      
+      // Can create own status
+      allow create: if isAuthenticated() && 
+                       request.resource.data.userId == request.auth.uid;
+      
+      // Can update own status
+      allow update: if isAuthenticated() && 
+                       resource.data.userId == request.auth.uid;
+      
+      // Can delete own status
+      allow delete: if isAuthenticated() && 
+                       resource.data.userId == request.auth.uid;
+    }
+    
+    // Channels collection
+    match /channels/{channelId} {
+      // Anyone can read channels
+      allow read: if isAuthenticated();
+      
+      // Only channel creators can write
+      allow write: if isAuthenticated() && 
+                      resource.data.createdBy == request.auth.uid;
+    }
+    
+    // Game configs collection
+    match /gameConfigs/{configId} {
+      // Anyone can read game configs
+      allow read: if isAuthenticated();
+      
+      // Only admins can write (restrict in app logic)
+      allow write: if false;
+    }
+  }
+}

@@ -1,0 +1,145 @@
+/* NotificationPrompt Styles */
+
+.notification-prompt {
+    position: fixed;
+    top: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 10000;
+    animation: slideDown 0.3s ease-out;
+}
+
+@keyframes slideDown {
+    from {
+        opacity: 0;
+        transform: translateX(-50%) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: translateX(-50%) translateY(0);
+    }
+}
+
+.notification-prompt__content {
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.15);
+    padding: 16px 20px;
+    display: flex;
+    align-items: center;
+    gap: 16px;
+    max-width: 90vw;
+    width: 400px;
+}
+
+.dark .notification-prompt__content {
+    background: #2a2f32;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.5);
+}
+
+.notification-prompt__icon {
+    color: var(--wa-teal, #008069);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 128, 105, 0.1);
+    border-radius: 50%;
+    width: 48px;
+    height: 48px;
+    flex-shrink: 0;
+}
+
+.notification-prompt__text {
+    flex: 1;
+}
+
+.notification-prompt__text h3 {
+    margin: 0;
+    font-size: 16px;
+    font-weight: 600;
+    color: #1f2937;
+}
+
+.dark .notification-prompt__text h3 {
+    color: #e5e7eb;
+}
+
+.notification-prompt__text p {
+    margin: 4px 0 0 0;
+    font-size: 14px;
+    color: #6b7280;
+}
+
+.dark .notification-prompt__text p {
+    color: #9ca3af;
+}
+
+.notification-prompt__actions {
+    display: flex;
+    gap: 8px;
+    align-items: center;
+}
+
+.notification-prompt__button {
+    border: none;
+    border-radius: 8px;
+    padding: 8px 16px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.notification-prompt__button--primary {
+    background: var(--wa-teal, #008069);
+    color: white;
+}
+
+.notification-prompt__button--primary:hover {
+    background: #006d5b;
+}
+
+.notification-prompt__button--secondary {
+    background: transparent;
+    color: #6b7280;
+    padding: 8px;
+    width: 32px;
+    height: 32px;
+}
+
+.dark .notification-prompt__button--secondary {
+    color: #9ca3af;
+}
+
+.notification-prompt__button--secondary:hover {
+    background: rgba(0, 0, 0, 0.05);
+}
+
+.dark .notification-prompt__button--secondary:hover {
+    background: rgba(255, 255, 255, 0.05);
+}
+
+/* Mobile responsive */
+@media (max-width: 768px) {
+    .notification-prompt {
+        top: 10px;
+        left: 10px;
+        right: 10px;
+        transform: none;
+    }
+
+    .notification-prompt__content {
+        width: auto;
+    }
+
+    .notification-prompt__text h3 {
+        font-size: 15px;
+    }
+
+    .notification-prompt__text p {
+        font-size: 13px;
+    }
+}
