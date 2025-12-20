@@ -72,18 +72,8 @@ const TabletLayout = () => {
     const tabletEffectClass = getTabletEffectClass();
     const tabletTextColors = logoEffect === 'shine' ? '' : 'text-[#111b21] dark:text-gray-100';
 
-    const { width, isPortrait } = useResponsive();
-    
-    // Responsive sidebar width for tablets
-    const sidebarWidth = useMemo(() => {
-        if (isPortrait) {
-            // Portrait: wider sidebar for better readability
-            return width >= 850 ? 'w-[380px]' : 'w-[360px]';
-        } else {
-            // Landscape: narrower sidebar to show more chat content
-            return width >= 1200 ? 'w-[360px]' : 'w-[340px]';
-        }
-    }, [width, isPortrait]);
+    // Responsive sidebar width for tablets - using simple breakpoint logic
+    const sidebarWidth = 'w-[360px]';
 
     return (
         <div className="flex h-screen w-full bg-[#EFEAE2] dark:bg-[#0b141a] relative overflow-hidden">

@@ -6,6 +6,7 @@ import { useLocalStorage, useSessionStorage } from '../hooks/useStorage';
 import { useNotifications } from '../hooks/useNotifications';
 import authService from '../../services/firebase/AuthService';
 import { messageFirebaseService } from '../../services/firebase/MessageFirebaseService';
+import settingsService from '../../services/firebase/SettingsService';
 
 const AppContext = createContext(undefined);
 
@@ -90,6 +91,9 @@ export const AppProvider = ({ children }) => {
   // Real-time subscriptions tracking
   const [messageSubscriptions, setMessageSubscriptions] = useState(new Map());
 
+  // Hidden messages for "Delete for Me" functionality
+  const [hiddenMessages, setHiddenMessages] = useLocalStorage('hiddenMessages', {});
+
   // Firebase Auth State Listener
   useEffect(() => {
     console.log('🔐 Setting up Firebase auth state listener');
@@ -127,6 +131,47 @@ export const AppProvider = ({ children }) => {
           });
         }
         
+        // Load settings from Firebase
+        try {
+          const { settings: firebaseSettings } = await settingsService.getAllSettings(user.uid);
+          if (firebaseSettings) {
+            console.log('🔧 Loading settings from Firebase...');
+
+            // Load app settings (theme, language, logoEffect)
+            if (firebaseSettings.appSettings) {
+              if (firebaseSettings.appSettings.theme) {
+                setTheme(firebaseSettings.appSettings.theme);
+              }
+              if (firebaseSettings.appSettings.language) {
+                setLanguage(firebaseSettings.appSettings.language);
+              }
+              if (firebaseSettings.appSettings.logoEffect) {
+                setLogoEffect(firebaseSettings.appSettings.logoEffect);
+              }
+            }
+
+            // Load chat settings
+            if (firebaseSettings.chatSettings) {
+              setChatSettings(firebaseSettings.chatSettings);
+            }
+
+            // Load security settings
+            if (firebaseSettings.securitySettings) {
+              setSecuritySettings(firebaseSettings.securitySettings);
+            }
+
+            // Load privacy settings
+            if (firebaseSettings.privacySettings?.statusPrivacy) {
+              setStatusPrivacy(firebaseSettings.privacySettings.statusPrivacy);
+            }
+
+            console.log('✅ Settings loaded from Firebase');
+          }
+        } catch (error) {
+          console.log('⚠️ No Firebase settings found, using localStorage:', error.message);
+          // Continue with localStorage values (already loaded)
+        }
+
         // Generate session ID
         if (!activeSessionId) {
           setActiveSessionId(`session_${Date.now()}_${user.uid}`);
@@ -261,17 +306,72 @@ export const AppProvider = ({ children }) => {
     }
   }, [messageSubscriptions]);
 
-  const updateChatSettings = useCallback((newSettings) => {
+  const updateChatSettings = useCallback(async (newSettings) => {
+  // Update localStorage immediately for responsive UI
     setChatSettings(prev => ({ ...prev, ...newSettings }));
-  }, []);
 
-  const updateSecuritySettings = useCallback((newSettings) => {
+    // Sync to Firebase in background (non-blocking)
+    if (currentUser?.id) {
+      try {
+        const merged = { ...chatSettings, ...newSettings };
+        await settingsService.updateChatSettings(currentUser.id, merged);
+        console.log('✅ Chat settings synced to Firebase');
+      } catch (error) {
+        console.error('❌ Failed to sync chat settings to Firebase:', error);
+        // UI continues to work with localStorage
+      }
+    }
+  }, [currentUser, chatSettings]);
+
+  const updateSecuritySettings = useCallback(async (newSettings) => {
+  // Update localStorage immediately for responsive UI
     setSecuritySettings(prev => ({ ...prev, ...newSettings }));
-  }, []);
+
+    // Sync to Firebase in background (non-blocking)
+    if (currentUser?.id) {
+      try {
+        const merged = { ...securitySettings, ...newSettings };
+        await settingsService.updateSecuritySettings(currentUser.id, merged);
+        console.log('✅ Security settings synced to Firebase');
+      } catch (error) {
+        console.error('❌ Failed to sync security settings to Firebase:', error);
+        // UI continues to work with localStorage
+      }
+    }
+  }, [currentUser, securitySettings]);
+
+  const updateAppSettings = useCallback(async (newSettings) => {
+    // Update individual settings in localStorage
+    if (newSettings.theme !== undefined) {
+      setTheme(newSettings.theme);
+    }
+    if (newSettings.language !== undefined) {
+      setLanguage(newSettings.language);
+    }
+    if (newSettings.logoEffect !== undefined) {
+      setLogoEffect(newSettings.logoEffect);
+    }
+
+    // Sync to Firebase in background
+    if (currentUser?.id) {
+      try {
+        const appSettingsToSync = {
+          theme: newSettings.theme !== undefined ? newSettings.theme : theme,
+          language: newSettings.language !== undefined ? newSettings.language : language,
+          logoEffect: newSettings.logoEffect !== undefined ? newSettings.logoEffect : logoEffect
+        };
+        await settingsService.updateAppSettings(currentUser.id, appSettingsToSync);
+        console.log('✅ App settings synced to Firebase');
+      } catch (error) {
+        console.error('❌ Failed to sync app settings to Firebase:', error);
+      }
+    }
+  }, [currentUser, theme, language, logoEffect]);
 
   const toggleTheme = useCallback(() => {
-    setTheme(prev => prev === 'light' ? 'dark' : 'light');
-  }, []);
+    const newTheme = theme === 'light' ? 'dark' : 'light';
+    updateAppSettings({ theme: newTheme });
+  }, [theme, updateAppSettings]);
 
   const updateUserProfile = useCallback((name, about, avatar) => {
     const updated = { ...currentUser, name, about, avatar };
@@ -568,37 +668,61 @@ export const AppProvider = ({ children }) => {
     });
   }, [currentUser]);
 
-  const deleteMessages = useCallback((chatId, messageIds, deleteForEveryone) => {
+  // Delete for Me - hides messages locally
+  const deleteForMe = useCallback((chatId, messageIds) => {
+    setHiddenMessages(prev => {
+      const chatHidden = new Set(prev[chatId] || []);
+      messageIds.forEach(id => chatHidden.add(id));
+      return {
+        ...prev,
+        [chatId]: Array.from(chatHidden)
+      };
+    });
+  }, [setHiddenMessages]);
+
+  // Delete for Everyone - marks as deleted for all users 
+  const deleteForEveryone = useCallback((chatId, messageIds) => {
     setMessages(prev => {
       const chatMessages = prev[chatId] || [];
       const idsSet = new Set(messageIds);
 
-      if (deleteForEveryone) {
-        return {
-          ...prev,
-          [chatId]: chatMessages.map(msg =>
-            idsSet.has(msg.id)
-              ? {
-                ...msg,
-                isDeleted: true,
-                text: msg.senderId === currentUser.id ? 'You deleted this message' : 'This message was deleted',
-                type: 'text',
-                reactions: undefined,
-                mediaUrl: undefined,
-                replyToId: undefined,
-                pollData: undefined
-              }
-              : msg
-          )
-        };
-      } else {
-        return {
-          ...prev,
-          [chatId]: chatMessages.filter(msg => !idsSet.has(msg.id))
-        };
-      }
+      return {
+        ...prev,
+        [chatId]: chatMessages.map(msg =>
+          idsSet.has(msg.id)
+            ? {
+              ...msg,
+              isDeleted: true,
+              text: msg.senderId === currentUser.id ? 'You deleted this message' : 'This message was deleted',
+              type: 'text',
+              reactions: undefined,
+              mediaUrl: undefined,
+              mediaUrls: undefined,
+              replyToId: undefined,
+              pollData: undefined
+            }
+            : msg
+        )
+      };
     });
   }, [currentUser]);
+
+  // Check if message can be deleted for everyone (time limit check)
+  const canDeleteForEveryone = useCallback((messageTimestamp) => {
+    const TIME_LIMIT_MS = 60 * 60 * 1000; // 1 hour in milliseconds
+    const now = Date.now();
+    const messageTime = new Date(messageTimestamp).getTime();
+    return (now - messageTime) < TIME_LIMIT_MS;
+  }, []);
+
+  // Legacy deleteMessages function - keeping for compatibility
+  const deleteMessages = useCallback((chatId, messageIds, deleteForEveryoneFlag) => {
+    if (deleteForEveryoneFlag) {
+      deleteForEveryone(chatId, messageIds);
+    } else {
+      deleteForMe(chatId, messageIds);
+    }
+  }, [deleteForMe, deleteForEveryone]);
 
   const toggleArchiveChat = useCallback((chatId) => {
     setChats(prev => prev.map(chat =>
@@ -1030,6 +1154,7 @@ export const AppProvider = ({ children }) => {
     // prevent duplicates: login/logout were here twice
     updateChatSettings,
     updateSecuritySettings,
+    updateAppSettings,
     toggleTheme,
     updateUserProfile,
     setDraft,
@@ -1054,10 +1179,15 @@ export const AppProvider = ({ children }) => {
     editMessage,
     markMessageAsViewed,
     deleteMessages,
+    deleteForMe,
+    deleteForEveryone,
+    canDeleteForEveryone,
+    hiddenMessages,
     toggleArchiveChat,
     togglePinChat,
     setSearchQuery,
-    setLogoEffect,
+    setLogoEffect: (effect) => updateAppSettings({ logoEffect: effect }),
+    setLanguage: (lang) => updateAppSettings({ language: lang }),
     // Online Status & Typing Actions
     markUserOnline,
     markUserOffline,
@@ -1070,12 +1200,14 @@ export const AppProvider = ({ children }) => {
     chats, messages, users, calls, statusUpdates, channels, chatDocuments,
     currentUser, data?.currentUserId, drafts, chatSettings,
     securitySettings, statusPrivacy, searchQuery, logoEffect, data?.appConfig,
-    data?.gameConfig, isAuthenticated, authLoading, firebaseUser, login, logout, updateChatSettings, updateSecuritySettings,
+    data?.gameConfig, isAuthenticated, authLoading, firebaseUser, login, logout,
+    updateChatSettings, updateSecuritySettings, updateAppSettings,
     toggleTheme, updateUserProfile, setDraft, startChat, createGroup,
     addGroupParticipants, updateGroupSettings, updateGroupRole, addMessage,
-    votePoll, deleteMessages, toggleArchiveChat, togglePinChat,
+    votePoll, deleteMessages, deleteForMe, deleteForEveryone, canDeleteForEveryone, hiddenMessages,
+    toggleArchiveChat, togglePinChat,
     toggleDateLock, addStatusUpdate, deleteStatusUpdate, setSearchQuery,
-    setLogoEffect, activeGame, activeGames, gameRooms, gameHistory, isGameInviteOpen, inviteOptions, 
+    activeGame, activeGames, gameRooms, gameHistory, isGameInviteOpen, inviteOptions, 
     openGameInvite, closeGameInvite, inviteToGame, joinGame, makeGameMove, updateGameState,
     endGame, closeGame, minimizeGame, maximizeGame, editMessage, markMessageAsViewed,
     onlineUsers, typingUsers, lastSeen, markUserOnline, markUserOffline,

@@ -185,10 +185,13 @@ export const useChatWindowController = () => {
         setActiveMessageId(null);
     }, []);
 
-    const handleTranslate = useCallback((msgId) => {
+    const handleTranslate = useCallback(async (msgId) => {
         const newSet = new Set(translatedMessages);
-        if (newSet.has(msgId)) newSet.delete(msgId);
-        else newSet.add(msgId);
+        if (newSet.has(msgId)) {
+            newSet.delete(msgId);
+        } else {
+            newSet.add(msgId);
+        }
         setTranslatedMessages(newSet);
         setActiveMessageId(null);
     }, [translatedMessages]);

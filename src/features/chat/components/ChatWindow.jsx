@@ -30,98 +30,32 @@ import { combineFormatting } from '../../../shared/components/text/MessageFormat
 import AttachmentMenu from './AttachmentMenu';
 import MessageList from './MessageList';
 import ThreadView from './threading/ThreadView';
+import { translateText } from '../../../services/TranslationService';
+import DeleteMessageModal from './DeleteMessageModal';
 
 
 const REACTIONS_LIST = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
 
+// Synchronous wrapper for async translation
+// Returns a placeholder immediately and text will update when translation completes
 const mockTranslate = (text, lang) => {
-    const dictionary = {
-        'Spanish': {
-            'Hello': 'Hola',
-            'How are you?': '¿Cómo estás?',
-            'Good morning': 'Buenos días',
-            'Good night': 'Buenas noches',
-            'Thank you': 'Gracias',
-            'Yes': 'Sí',
-            'No': 'No',
-            'Please': 'Por favor',
-            'Sorry': 'Lo siento',
-            'I love you': 'Te amo'
-        },
-        'French': {
-            'Hello': 'Bonjour',
-            'How are you?': 'Comment allez-vous?',
-            'Good morning': 'Bonjour',
-            'Good night': 'Bonne nuit',
-            'Thank you': 'Merci',
-            'Yes': 'Oui',
-            'No': 'Non',
-            'Please': 'S\'il vous plaît',
-            'Sorry': 'Désolé',
-            'I love you': 'Je t\'aime'
-        },
-        'German': {
-            'Hello': 'Hallo',
-            'How are you?': 'Wie geht es dir?',
-            'Good morning': 'Guten Morgen',
-            'Good night': 'Gute Nacht',
-            'Thank you': 'Danke',
-            'Yes': 'Ja',
-            'No': 'Nein',
-            'Please': 'Bitte',
-            'Sorry': 'Entschuldigung',
-            'I love you': 'Ich liebe dich'
-        },
-        'Japanese': {
-            'Hello': 'こんにちは',
-            'How are you?': 'お元気ですか？',
-            'Good morning': 'おはようございます',
-            'Good night': 'おやすみなさい',
-            'Thank you': 'ありがとうございます',
-            'Yes': 'はい',
-            'No': 'いいえ',
-            'Please': 'お願いします',
-            'Sorry': 'ごめんなさい',
-            'I love you': '愛してる'
-        },
-        'Arabic': {
-            'Hello': 'مرحبا',
-            'How are you?': 'كيف حالك؟',
-            'Good morning': 'صباح الخير',
-            'Good night': 'تصبح على خير',
-            'Thank you': 'شكرا لك',
-            'Yes': 'نعم',
-            'No': 'لا',
-            'Please': 'من فضلك',
-            'Sorry': 'آسف',
-            'I love you': 'أنا أحبك'
-        }
-    };
-
-    const cleanText = text.trim().replace(/[.!?]$/, '');
-    if (dictionary[lang] && dictionary[lang][cleanText]) {
-        return dictionary[lang][cleanText];
-    }
-
-    // Fallback pseudo-translation logic
-    if (lang === 'Spanish') return text.replace(/o\b/g, 'os').replace(/a\b/g, 'as') + '... el hola';
-    if (lang === 'French') return 'Le ' + text.replace(/e\b/g, 'eaux') + ' s\'il vous plaît';
-    if (lang === 'Japanese') return text.split(' ').join('-') + ' です';
-
-    return `[${lang}]: ${text}`;
-}
-
-
-
+    // This is a synchronous placeholder that returns the original text
+    // The actual translation happens in the message bubble component
+    return text;
+};
 
 
 const ChatWindow = () => {
     const ctrl = useChatWindowController();
-    const { toggleStarMessage } = useApp();
+    const { toggleStarMessage, deleteForMe, deleteForEveryone, canDeleteForEveryone, hiddenMessages } = useApp();
     const fileInputRef = useRef(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const [isPolling, setIsPolling] = useState(false);
     const [viewingPoll, setViewingPoll] = useState(null);
+
+    // Delete Modal State
+    const [deleteModalOpen, setDeleteModalOpen] = useState(false);
+    const [messageToDelete, setMessageToDelete] = useState(null);
 
     // Media Preview State
     const [previewMedia, setPreviewMedia] = useState(null);
@@ -137,6 +71,28 @@ const ChatWindow = () => {
     // Phase 2: Advanced Search
     const [selectedSearchResult, setSelectedSearchResult] = useState(null);
 
+
+
+    // Delete handlers
+    const handleDeleteForMe = () => {
+        if (messageToDelete) {
+            deleteForMe(ctrl.chatId, [messageToDelete.id]);
+            ctrl.setActiveMessageId(null);
+        }
+    };
+
+    const handleDeleteForEveryone = () => {
+        if (messageToDelete) {
+            deleteForEveryone(ctrl.chatId, [messageToDelete.id]);
+            ctrl.setActiveMessageId(null);
+        }
+    };
+
+    const canDeleteMsgForEveryone = messageToDelete ? canDeleteForEveryone(messageToDelete.timestamp) : false;
+    const timeWarning = !canDeleteMsgForEveryone && messageToDelete
+        ? "You can only delete for everyone within 1 hour of sending the message."
+        : null;
+
     if (!ctrl.chat) return (
         <div className="flex flex-col items-center justify-center h-full text-gray-500 bg-wa-bg">
             <p>Chat not found</p>
@@ -147,6 +103,12 @@ const ChatWindow = () => {
     const filteredMessages = ctrl.messageSearchQuery
         ? ctrl.chatMessages.filter(m => m.text.toLowerCase().includes(ctrl.messageSearchQuery.toLowerCase()))
         : ctrl.chatMessages;
+
+    // Filter out hidden messages (Delete for Me)
+    const visibleMessages = filteredMessages.filter(msg => {
+        const chatHidden = hiddenMessages[ctrl.chatId] || [];
+        return !chatHidden.includes(msg.id);
+    });
 
 
 
@@ -305,6 +267,20 @@ const ChatWindow = () => {
                 </div>
             )}
 
+            {/* Delete Message Modal */}
+            <DeleteMessageModal
+                isOpen={deleteModalOpen}
+                onClose={() => {
+                    setDeleteModalOpen(false);
+                    setMessageToDelete(null);
+                }}
+                onDeleteForMe={handleDeleteForMe}
+                onDeleteForEveryone={handleDeleteForEveryone}
+                messageCount={1}
+                canDeleteForEveryone={canDeleteMsgForEveryone}
+                timeWarning={timeWarning}
+            />
+
             {/* Header / Selection Mode / Search */}
             {ctrl.isSelectionMode ? (
                 <div className="h-[60px] bg-wa-teal dark:bg-wa-dark-header flex items-center px-4 gap-6 text-white z-10 shrink-0 shadow-md">
@@ -398,8 +374,7 @@ const ChatWindow = () => {
                             })()}
                         </div>
                     </div>
-                    <div className="flex items-center gap-2 md:gap-4 text-wa-teal dark:text-wa-teal shrink-0">
-                        {!ctrl.chat.isLocked && <button onClick={() => ctrl.openGameInvite({ isGroup: ctrl.chat?.isGroup || false, chatId: ctrl.chat?.id, opponentId: ctrl.chat?.isGroup ? 'group' : ctrl.chat?.contactId })} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full md:block hidden" title="Play Game"><span className="text-xl">🎮</span></button>}
+                            <div className="flex items-center gap-2 md:gap-4 text-wa-teal dark:text-wa-teal shrink-0">
                         <button onClick={() => ctrl.contact && ctrl.startCall(ctrl.contact.id, 'video')} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full"><VideoIcon size={24} /></button>
                         <button onClick={() => ctrl.contact && ctrl.startCall(ctrl.contact.id, 'voice')} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full"><Phone size={22} /></button>
                         <button className="hidden md:block p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full" onClick={() => ctrl.setIsSearchOpen(true)}><Search size={22} className="text-[#54656f] dark:text-gray-400" /></button>
@@ -409,8 +384,7 @@ const ChatWindow = () => {
                                 <>
                                     <div className="fixed inset-0 z-40" onClick={() => ctrl.setIsMenuOpen(false)}></div>
                                     <div className="absolute right-0 top-full mt-2 w-56 bg-white dark:bg-wa-dark-paper rounded-lg shadow-xl border border-wa-border dark:border-wa-dark-border z-50 py-2 origin-top-right animate-in fade-in zoom-in-95 duration-200">
-                                        <button onClick={() => { ctrl.navigateToInfo(); ctrl.setIsMenuOpen(false); }} className="w-full text-left px-4 py-3 hover:bg-gray-100 dark:hover:bg-wa-dark-hover text-[#111b21] dark:text-gray-100 text-[15px]">{ctrl.chat.isGroup ? 'Group info' : 'Contact info'}</button>
-                                        {!ctrl.chat.isLocked && <button onClick={() => { ctrl.openGameInvite({ isGroup: ctrl.chat?.isGroup || false, chatId: ctrl.chat?.id, opponentId: ctrl.chat?.isGroup ? 'group' : ctrl.chat?.contactId }); ctrl.setIsMenuOpen(false); }} className="w-full text-left px-4 py-3 hover:bg-gray-100 dark:hover:bg-wa-dark-hover text-[#111b21] dark:text-gray-100 text-[15px] flex items-center gap-2"><span>Play Game</span><span className="text-sm">🎮</span></button>}
+                                                <button onClick={() => { ctrl.navigateToInfo(); ctrl.setIsMenuOpen(false); }} className="w-full text-left px-4 py-3 hover:bg-gray-100 dark:hover:bg-wa-dark-hover text-[#111b21] dark:text-gray-100 text-[15px]">{ctrl.chat.isGroup ? 'Group info' : 'Contact info'}</button>
                                         <button onClick={() => { ctrl.setIsSearchOpen(true); ctrl.setIsMenuOpen(false); }} className="w-full text-left px-4 py-3 hover:bg-gray-100 dark:hover:bg-wa-dark-hover text-[#111b21] dark:text-gray-100 text-[15px]">Search</button>
                                         <button onClick={() => { ctrl.deleteMessages(ctrl.chatId, [], true); ctrl.setIsMenuOpen(false); }} className="w-full text-left px-4 py-3 hover:bg-gray-100 dark:hover:bg-wa-dark-hover text-[#111b21] dark:text-gray-100 text-[15px]">Clear chat</button>
                                         <button onClick={() => { ctrl.setIsMenuOpen(false); ctrl.navigateToChats(); }} className="w-full text-left px-4 py-3 hover:bg-gray-100 dark:hover:bg-wa-dark-hover text-[#111b21] dark:text-gray-100 text-[15px]">Close chat</button>
@@ -424,7 +398,7 @@ const ChatWindow = () => {
 
             {/* Messages List */}
             <MessageList
-                messages={filteredMessages}
+                messages={visibleMessages}
                 currentUser={{ id: ctrl.currentUserId }}
                 chatContainerRef={ctrl.chatContainerRef}
                 messagesEndRef={ctrl.messagesEndRef}
@@ -471,7 +445,10 @@ const ChatWindow = () => {
                             }
                             break;
                         case 'delete':
-                            ctrl.deleteMessages(ctrl.chatId, [payload]);
+                            const msgId = payload;
+                            const msg = ctrl.chatMessages.find(m => m.id === msgId);
+                            setMessageToDelete(msg);
+                            setDeleteModalOpen(true);
                             break;
                         default: break;
                     }

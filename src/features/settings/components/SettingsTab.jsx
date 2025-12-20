@@ -79,11 +79,20 @@ const LanguageSettingsScreen = ({ onClose }) => {
     const { language, setLanguage, appConfig, chatSettings, updateChatSettings } = useApp();
     const { t, i18n } = useTranslation();
     const [activeTab, setActiveTab] = useState('app'); // 'app' or 'translation'
-    
+
+
     const LANGUAGES = [
         { name: 'English', code: 'en' },
         { name: 'Spanish', code: 'es' },
         { name: 'Hindi', code: 'hi' },
+        { name: 'Telugu', code: 'te' },
+        { name: 'Tamil', code: 'ta' },
+        { name: 'Kannada', code: 'kn' },
+        { name: 'Malayalam', code: 'ml' },
+        { name: 'Bengali', code: 'bn' },
+        { name: 'Gujarati', code: 'gu' },
+        { name: 'Punjabi', code: 'pa' },
+        { name: 'Marathi', code: 'mr' },
         { name: 'French', code: 'fr' },
         { name: 'German', code: 'de' },
         { name: 'Japanese', code: 'ja' }
