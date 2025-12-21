@@ -1,6 +1,6 @@
 import React, { useState, useMemo, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Key, User as UserIcon, Bell, Database, HelpCircle, Heart, Moon, Sun, Edit2, Check, X, Camera, Globe, Sparkles, MessageCircle, ArrowLeft, Palette, Type, Lock, Shield, FileText, Image as ImageIcon, Video, Mic, BarChart2, Upload, Trash2, Ban, Plus, Star, Search, Trophy } from 'lucide-react';
+import { Key, User as UserIcon, Bell, Database, HelpCircle, Heart, Moon, Sun, Edit2, Check, X, Camera, Globe, Sparkles, MessageCircle, ArrowLeft, Palette, Type, Lock, Shield, FileText, Image as ImageIcon, Video, Mic, BarChart2, Upload, Trash2, Ban, Plus, Star, Search, Trophy, Archive } from 'lucide-react';
 import { useApp } from '../../../shared/context/AppContext';
 import { useTranslation } from 'react-i18next';
 import StarredMessagesScreen from './StarredMessagesScreen';
@@ -250,6 +250,9 @@ const PasswordSettingsScreen = ({ onClose }) => {
         } else if (editingType === 'chat') {
             updateSecuritySettings({ chatLockPassword: newPassword });
             setMessage('Chat Lock Password updated!');
+        } else if (editingType === 'archive') {
+            updateSecuritySettings({ archiveLockPassword: newPassword });
+            setMessage('Archive Lock Password updated!');
         }
 
         setTimeout(() => {
@@ -274,7 +277,7 @@ const PasswordSettingsScreen = ({ onClose }) => {
                 {editingType ? (
                     <div className="bg-white dark:bg-wa-dark-paper p-6 rounded-lg shadow-sm border border-wa-border dark:border-gray-700">
                         <h3 className="text-lg font-medium text-[#111b21] dark:text-gray-100 mb-6">
-                            Set {editingType === 'daily' ? 'App Lock' : 'Chat Lock'} Password
+                            Set {editingType === 'daily' ? 'App Lock' : editingType === 'chat' ? 'Chat Lock' : 'Archive Lock'} Password
                         </h3>
 
                         <div className="space-y-4">
@@ -367,6 +370,30 @@ const PasswordSettingsScreen = ({ onClose }) => {
                                 </button>
                             </div>
                         </div>
+
+                            {/* Archive Lock Card */}
+                            <div className="bg-white dark:bg-wa-dark-paper rounded-lg shadow-sm border border-wa-border dark:border-gray-700 overflow-hidden">
+                                <div className="p-4 flex items-center gap-4 border-b border-gray-100 dark:border-gray-700">
+                                    <div className="w-10 h-10 rounded-full bg-purple-100 dark:bg-purple-900/30 flex items-center justify-center text-purple-500">
+                                        <Archive size={20} />
+                                    </div>
+                                    <div className="flex-1">
+                                        <h3 className="text-base font-medium text-[#111b21] dark:text-gray-100">Archive Lock</h3>
+                                        <p className="text-xs text-[#667781] dark:text-gray-500">Passcode to access archive folder</p>
+                                    </div>
+                                </div>
+                                <div className="p-4 bg-gray-50 dark:bg-white/5 flex justify-between items-center">
+                                    <div className="text-sm text-[#111b21] dark:text-gray-300">
+                                        Status: <span className="font-medium text-wa-teal">{securitySettings.archiveLockPassword ? 'Set' : 'Not Set'}</span>
+                                    </div>
+                                    <button
+                                        onClick={() => setEditingType('archive')}
+                                        className="text-sm font-medium text-wa-teal hover:underline"
+                                    >
+                                        Change
+                                    </button>
+                                </div>
+                            </div>
 
                         <div className="text-center p-4">
                             <p className="text-xs text-[#667781] dark:text-gray-500">

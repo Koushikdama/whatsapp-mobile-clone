@@ -26,6 +26,7 @@ const DEFAULT_CHAT_SETTINGS = {
 const DEFAULT_SECURITY_SETTINGS = {
   dailyLockPassword: '',  // User must set their own PIN
   chatLockPassword: '',   // User must set their own PIN
+  archiveLockPassword: '', // User must set their own PIN
   isAppLockEnabled: false
 };
 
@@ -1261,14 +1262,48 @@ export const AppProvider = ({ children }) => {
     });
   }, [currentUser]);
 
-  const updateChatTheme = useCallback((chatId, color, type) => {
+  const updateChatTheme = useCallback(async (chatId, color, type) => {
+  // 1. Optimistic Update for instant UI feedback
     setChats(prev => prev.map(c => {
       if (c.id !== chatId) return c;
-      return type === 'outgoing'
-        ? { ...c, themeColor: color }
-        : { ...c, incomingThemeColor: color };
+
+      // Update both root level (backward compatibility) and userSettings (Firebase structure)
+      if (type === 'outgoing') {
+        return {
+          ...c,
+          themeColor: color,
+          userSettings: {
+            ...c.userSettings,
+            themeColor: color
+          }
+        };
+      } else {
+        return {
+          ...c,
+          incomingThemeColor: color,
+          userSettings: {
+            ...c.userSettings,
+            incomingThemeColor: color
+          }
+        };
+      }
     }));
-  }, []);
+
+    // 2. Persist to Firebase in background (non-blocking)
+    try {
+      if (currentUser?.id) {
+        const settings = type === 'outgoing'
+          ? { themeColor: color }
+          : { incomingThemeColor: color };
+
+        await chatFirebaseService.updateUserChatSettings(chatId, currentUser.id, settings);
+        console.log(`✅ Theme ${type} color updated successfully`);
+      }
+    } catch (error) {
+      console.error('❌ Failed to persist theme color:', error);
+      // UI continues to work with local state even if Firebase sync fails
+    }
+  }, [currentUser]);
 
   const toggleChatLock = useCallback(async (chatId) => {
   // 1. Optimistic Update
@@ -1715,7 +1750,11 @@ export const AppProvider = ({ children }) => {
     toggleArchiveChat,
     togglePinChat,
     toggleChatLock,
+    updateChatTheme,
     toggleDateLock,
+    addStatusUpdate,
+    deleteStatusUpdate,
+    addReaction,
     setSearchQuery,
     setLogoEffect: (effect) => updateAppSettings({ logoEffect: effect }),
     setLanguage: (lang) => updateAppSettings({ language: lang }),

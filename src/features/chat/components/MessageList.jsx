@@ -26,7 +26,10 @@ const MessageList = ({
     // Threading
     onScrollToMessage,
     onOpenThread,
-    messageRefs
+    messageRefs,
+
+    // Chat object for per-chat themes
+    chat
 }) => {
     const mentions = useMentions();
 
@@ -43,7 +46,19 @@ const MessageList = ({
         return groups;
     }, [messages]);
 
-    const getBubbleColor = (isMe) => isMe ? chatSettings.outgoingBubbleColor : chatSettings.incomingBubbleColor;
+    // Prioritize per-chat theme over global theme
+    const getBubbleColor = (isMe) => {
+        const perChatTheme = isMe
+            ? (chat?.userSettings?.themeColor || chat?.themeColor)
+            : (chat?.userSettings?.incomingThemeColor || chat?.incomingThemeColor);
+
+        const globalTheme = isMe
+            ? chatSettings.outgoingBubbleColor
+            : chatSettings.incomingBubbleColor;
+
+        // Use per-chat theme if set, otherwise fall back to global theme
+        return perChatTheme || globalTheme;
+    };
     const getFontSizeClass = () => {
         switch (chatSettings.fontSize) {
             case 'small': return 'text-[13px]';

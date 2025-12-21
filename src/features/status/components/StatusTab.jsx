@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, Edit2, Archive, ChevronDown, ChevronUp, MoreVertical, ArrowLeft, Plus, Camera } from 'lucide-react';
 import { useApp } from '../../../shared/context/AppContext';
@@ -106,13 +106,13 @@ const StatusTab = () => {
         }
     };
 
-    const openViewer = (updates, startIndex) => {
+    const openViewer = useCallback((updates, startIndex) => {
         setViewerState({ isOpen: true, updates, startIndex });
-    };
+    }, []);
 
-    const closeViewer = () => {
+    const closeViewer = useCallback(() => {
         setViewerState(prev => ({ ...prev, isOpen: false }));
-    };
+    }, []);
 
     const handleFileSelect = (e) => {
         const file = e.target.files?.[0];
@@ -139,10 +139,10 @@ const StatusTab = () => {
         }
     };
 
-    const triggerUpload = (e) => {
+    const triggerUpload = useCallback((e) => {
         e?.stopPropagation();
         fileInputRef.current?.click();
-    };
+    }, []);
 
     const handleMyStatusClick = () => {
         if (myUpdates.length > 0) {
@@ -329,7 +329,7 @@ const StatusTab = () => {
             {viewedUpdates.length > 0 && (
                 <div className="border-t border-wa-border dark:border-wa-dark-border mt-2">
                     <div
-                        onClick={() => setIsViewedExpanded(!isViewedExpanded)}
+                        onClick={useCallback(() => setIsViewedExpanded(prev => !prev), [])}
                         className="flex items-center justify-between px-4 py-2 cursor-pointer hover:bg-wa-grayBg dark:hover:bg-wa-dark-hover transition-colors"
                     >
                         <div className="text-[#667781] dark:text-gray-400 text-[13px] font-medium uppercase">
@@ -360,13 +360,13 @@ const StatusTab = () => {
             <ChannelSuggestions
                 channels={channels}
                 isExpanded={isSuggestionsExpanded}
-                onToggle={() => setIsSuggestionsExpanded(!isSuggestionsExpanded)}
+                onToggle={useCallback(() => setIsSuggestionsExpanded(prev => !prev), [])}
                 searchQuery={searchQuery}
             />
 
             <NearbyFriendsSection
                 isExpanded={isNearbyExpanded}
-                onToggle={() => setIsNearbyExpanded(!isNearbyExpanded)}
+                onToggle={useCallback(() => setIsNearbyExpanded(prev => !prev), [])}
                 searchQuery={searchQuery}
             />
 

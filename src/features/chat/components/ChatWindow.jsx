@@ -514,6 +514,7 @@ const ChatWindow = () => {
                     messageSearchQuery={ctrl.messageSearchQuery}
                     translatedMessages={ctrl.translatedMessages}
                     chatSettings={ctrl.chatSettings}
+                        chat={displayChat}
                         hiddenDates={displayChat?.userSettings?.hiddenDates}
                         mockTranslate={mockTranslate}
                         onDateLock={ctrl.handleDateLock || ctrl.setDateLockTarget} // Assuming handleDateLock might not exist, falling back to setting target

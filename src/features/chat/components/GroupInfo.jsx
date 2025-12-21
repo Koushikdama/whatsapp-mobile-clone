@@ -1,5 +1,5 @@
 
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ArrowLeft, User as UserIcon, Bell, Lock, Search, MoreVertical, Star, ThumbsUp, Trash2, LogOut, Pin, Palette, Check, Grid, Image as ImageIcon, Video as VideoIcon, FileText, BarChart2, ChevronRight, Download, Shield, EyeOff, ChevronDown, Unlock, CircleDashed, Plus, Settings, Ban, UserPlus, QrCode, X, Archive } from 'lucide-react';
@@ -57,6 +57,11 @@ const GroupInfo = () => {
     const [showAddParticipants, setShowAddParticipants] = useState(false);
     const [participantSearch, setParticipantSearch] = useState('');
     const [selectedToAdd, setSelectedToAdd] = useState(new Set());
+
+    // Archive Action PIN Modal
+    const [showArchiveModal, setShowArchiveModal] = useState(false);
+    const [archivePin, setArchivePin] = useState('');
+    const [archiveError, setArchiveError] = useState('');
 
     const chat = chats.find(c => c.id === chatId);
 
@@ -222,21 +227,59 @@ const GroupInfo = () => {
     };
 
     // --- Add Participant Handlers ---
-    const toggleSelectUser = (userId) => {
+    const toggleSelectUser = useCallback((userId) => {
         setSelectedToAdd(prev => {
             const newSet = new Set(prev);
             if (newSet.has(userId)) newSet.delete(userId);
             else newSet.add(userId);
             return newSet;
         });
-    };
+    }, []);
 
-    const handleAddParticipants = () => {
+    const handleAddParticipants = useCallback(() => {
         if (selectedToAdd.size === 0 || !chatId) return;
         addGroupParticipants(chatId, Array.from(selectedToAdd));
         setShowAddParticipants(false);
         setSelectedToAdd(new Set());
         setParticipantSearch('');
+    }, [selectedToAdd, chatId, addGroupParticipants]);
+
+    // Theme update handlers with logging
+    const handleOutgoingTheme = useCallback((colorValue) => {
+        console.log('🎨 Outgoing theme button clicked:', colorValue);
+        if (chatId) {
+            updateChatTheme(chatId, colorValue, 'outgoing');
+        }
+    }, [chatId, updateChatTheme]);
+
+    const handleIncomingTheme = useCallback((colorValue) => {
+        console.log('🎨 Incoming theme button clicked:', colorValue);
+        if (chatId) {
+            updateChatTheme(chatId, colorValue, 'incoming');
+        }
+    }, [chatId, updateChatTheme]);
+
+    // Archive action handler with PIN protection
+    const handleArchiveAction = () => {
+        if (securitySettings.archiveLockPassword && securitySettings.archiveLockPassword !== '') {
+            setShowArchiveModal(true);
+            setArchivePin('');
+            setArchiveError('');
+        } else {
+            toggleArchiveChat(chatId);
+        }
+    };
+
+    const verifyArchivePin = () => {
+        const requiredPin = securitySettings.archiveLockPassword || '0000';
+        if (archivePin === requiredPin) {
+            toggleArchiveChat(chatId);
+            setShowArchiveModal(false);
+            setArchivePin('');
+        } else {
+            setArchiveError('Incorrect PIN');
+            setArchivePin('');
+        }
     };
 
     // --- Render Helpers ---
@@ -784,6 +827,47 @@ const GroupInfo = () => {
                 document.body
             )}
 
+            {/* ARCHIVE ACTION PIN MODAL */}
+            {showArchiveModal && createPortal(
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-wa-dark-paper rounded-lg shadow-xl w-full max-w-xs p-6 flex flex-col items-center">
+                        <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center mb-4 text-white">
+                            <Archive size={24} />
+                        </div>
+                        <h3 className="text-lg font-medium text-[#111b21] dark:text-gray-100 mb-2">Archive Lock</h3>
+                        <p className="text-sm text-[#667781] dark:text-gray-400 mb-6 text-center">
+                            Enter PIN to {chat.isArchived ? 'unarchive' : 'archive'} chat
+                        </p>
+
+                        <input
+                            type="password"
+                            maxLength={4}
+                            value={archivePin}
+                            onChange={(e) => {
+                                setArchivePin(e.target.value);
+                                setArchiveError('');
+                            }}
+                            onKeyDown={(e) => e.key === 'Enter' && verifyArchivePin()}
+                            className="w-full text-center text-2xl tracking-[0.5em] font-medium py-2 border-b-2 border-purple-500 bg-transparent outline-none mb-2 text-[#111b21] dark:text-gray-100 placeholder-transparent"
+                            placeholder="****"
+                            autoFocus
+                        />
+
+                        {archiveError && <p className="text-red-500 text-xs mb-4">{archiveError}</p>}
+
+                        <div className="flex gap-3 w-full mt-4">
+                            <button onClick={() => setShowArchiveModal(false)} className="flex-1 py-2 text-purple-500 font-medium hover:bg-wa-grayBg dark:hover:bg-wa-dark-hover rounded-full transition-colors">
+                                Cancel
+                            </button>
+                            <button onClick={verifyArchivePin} className="flex-1 py-2 bg-purple-500 text-white font-medium rounded-full shadow-sm hover:shadow-md transition-all">
+                                Unlock
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
             {/* When bg image is set, add overlay */}
             {chatSettings.contactInfoBackgroundImage && (
                 <div className="fixed inset-0 bg-white/40 dark:bg-black/40 pointer-events-none z-0 backdrop-blur-[2px]"></div>
@@ -966,11 +1050,11 @@ const GroupInfo = () => {
                                 </div>
                                 <div className="flex gap-4 pl-10 overflow-x-auto no-scrollbar pb-2 -mr-6 pr-6">
                                     {THEME_COLORS.map((color) => {
-                                        const isSelected = (chat.themeColor || '') === color.value;
+                                        const isSelected = (chat.userSettings?.themeColor || chat.themeColor || '') === color.value;
                                         return (
                                             <button
                                                 key={color.name}
-                                                onClick={() => chatId && updateChatTheme(chatId, color.value, 'outgoing')}
+                                                onClick={() => handleOutgoingTheme(color.value)}
                                                 className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center relative shadow-sm transition-transform hover:scale-105 ${isSelected ? 'border-2 border-wa-teal' : 'border-2 border-gray-200 dark:border-gray-600'}`}
                                                 style={{ backgroundColor: color.value || '#D9FDD3' }}
                                                 title={color.name}
@@ -991,11 +1075,11 @@ const GroupInfo = () => {
                                 </div>
                                 <div className="flex gap-4 pl-10 overflow-x-auto no-scrollbar pb-2 -mr-6 pr-6">
                                     {THEME_COLORS.map((color) => {
-                                        const isSelected = (chat.incomingThemeColor || '') === color.value;
+                                        const isSelected = (chat.userSettings?.incomingThemeColor || chat.incomingThemeColor || '') === color.value;
                                         return (
                                             <button
                                                 key={color.name}
-                                                onClick={() => chatId && updateChatTheme(chatId, color.value, 'incoming')}
+                                                onClick={() => handleIncomingTheme(color.value)}
                                                 className={`w-10 h-10 shrink-0 rounded-full flex items-center justify-center relative shadow-sm transition-transform hover:scale-105 ${isSelected ? 'border-2 border-wa-teal' : 'border-2 border-gray-200 dark:border-gray-600'}`}
                                                 style={{ backgroundColor: color.value || '#FFFFFF' }}
                                                 title={color.name}
@@ -1008,7 +1092,7 @@ const GroupInfo = () => {
                             </div>
 
                             {/* Archive Toggle */}
-                            <div className="flex items-center gap-4 cursor-pointer py-2 mb-4" onClick={() => toggleArchiveChat(chatId)}>
+                            <div className="flex items-center gap-4 cursor-pointer py-2 mb-4" onClick={handleArchiveAction}>
                                 <div className="w-6 flex justify-center text-wa-gray dark:text-gray-400"><Archive size={22} /></div>
                                 <div className="flex-1">
                                     <h3 className="text-base text-[#111b21] dark:text-gray-100">Archive Chat</h3>

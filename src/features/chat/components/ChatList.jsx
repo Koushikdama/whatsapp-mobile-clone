@@ -14,9 +14,16 @@ const ChatList = () => {
     const { chatId: activeChatId } = useParams();
     const { searchQuery, chats, messages, toggleArchiveChat, togglePinChat, securitySettings, users, chatSettings, drafts, onlineUsers } = useApp();
     const [activeFilter, setActiveFilter] = useState('all');
-    const [isLockModalOpen, setIsLockModalOpen] = useState(false);
-    const [pin, setPin] = useState('');
-    const [error, setError] = useState('');
+
+    // Archive Action PIN modal
+    const [archiveTarget, setArchiveTarget] = useState(null);
+    const [archivePin, setArchivePin] = useState('');
+    const [archiveError, setArchiveError] = useState('');
+
+    // Locked Chat Access PIN modal
+    const [lockedChatTarget, setLockedChatTarget] = useState(null);
+    const [chatLockPin, setChatLockPin] = useState('');
+    const [chatLockError, setChatLockError] = useState('');
 
     // Offload sorting and filtering to a Web Worker
     const { sortedChats } = useWorkerChatSearch({
@@ -28,20 +35,63 @@ const ChatList = () => {
 
     const archivedCount = chats.filter(c => c.isArchived).length;
 
+    // Direct navigation to archive - NO PIN required
     const handleArchivedClick = () => {
-        setIsLockModalOpen(true);
-        setPin('');
-        setError('');
+        navigate('/archived');
     };
 
-    const verifyPin = () => {
-        const requiredPin = securitySettings.chatLockPassword || '0000';
-        if (pin === requiredPin) {
-            setIsLockModalOpen(false);
-            navigate('/archived');
+    // Archive action handler - REQUIRES Archive Lock PIN
+    const handleArchiveAction = (chatId) => {
+        if (securitySettings.archiveLockPassword && securitySettings.archiveLockPassword !== '') {
+            // Archive Lock is set, require PIN
+            setArchiveTarget(chatId);
+            setArchivePin('');
+            setArchiveError('');
         } else {
-            setError('Incorrect PIN');
-            setPin('');
+            // No Archive Lock, toggle directly
+            toggleArchiveChat(chatId);
+        }
+    };
+
+    const verifyArchivePin = () => {
+        const requiredPin = securitySettings.archiveLockPassword || '0000';
+        if (archivePin === requiredPin) {
+            toggleArchiveChat(archiveTarget);
+            setArchiveTarget(null);
+            setArchivePin('');
+        } else {
+            setArchiveError('Incorrect PIN');
+            setArchivePin('');
+        }
+    };
+
+    // Chat click handler - checks if locked
+    const handleChatClick = (chat) => {
+        if (chat.isLocked) {
+            // Chat is locked, require Chat Lock PIN
+            if (securitySettings.chatLockPassword && securitySettings.chatLockPassword !== '') {
+                setLockedChatTarget(chat.id);
+                setChatLockPin('');
+                setChatLockError('');
+            } else {
+                // No Chat Lock password set, allow access
+                navigate(`/chat/${chat.id}`);
+            }
+        } else {
+            // Not locked, navigate directly
+            navigate(`/chat/${chat.id}`);
+        }
+    };
+
+    const verifyChatLockPin = () => {
+        const requiredPin = securitySettings.chatLockPassword || '0000';
+        if (chatLockPin === requiredPin) {
+            navigate(`/chat/${lockedChatTarget}`);
+            setLockedChatTarget(null);
+            setChatLockPin('');
+        } else {
+            setChatLockError('Incorrect PIN');
+            setChatLockPin('');
         }
     };
 
@@ -72,36 +122,76 @@ const ChatList = () => {
             className={`flex flex-col pb-4 min-h-full ${!chatSettings.chatListBackgroundImage ? 'bg-white dark:bg-wa-dark-bg' : ''}`}
             style={containerStyle}
         >
-            {isLockModalOpen && createPortal(
+            {/* Archive Action PIN Modal */}
+            {archiveTarget && createPortal(
                 <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
                     <div className="bg-white dark:bg-wa-dark-paper rounded-lg shadow-xl w-full max-w-xs p-6 flex flex-col items-center">
-                        <div className="w-12 h-12 bg-wa-teal rounded-full flex items-center justify-center mb-4 text-white">
-                            <Lock size={24} />
+                        <div className="w-12 h-12 bg-purple-500 rounded-full flex items-center justify-center mb-4 text-white">
+                            <Archive size={24} />
                         </div>
-                        <h3 className="text-lg font-medium text-[#111b21] dark:text-gray-100 mb-2">Locked Chats</h3>
-                        <p className="text-sm text-[#667781] dark:text-gray-400 mb-6 text-center">Enter PIN to access archived chats</p>
+                        <h3 className="text-lg font-medium text-[#111b21] dark:text-gray-100 mb-2">Archive Lock</h3>
+                        <p className="text-sm text-[#667781] dark:text-gray-400 mb-6 text-center">Enter PIN to archive/unarchive chat</p>
 
                         <input
                             type="password"
                             maxLength={4}
-                            value={pin}
+                            value={archivePin}
                             onChange={(e) => {
-                                setPin(e.target.value);
-                                setError('');
+                                setArchivePin(e.target.value);
+                                setArchiveError('');
                             }}
-                            onKeyDown={(e) => e.key === 'Enter' && verifyPin()}
-                            className="w-full text-center text-2xl tracking-[0.5em] font-medium py-2 border-b-2 border-wa-teal bg-transparent outline-none mb-2 text-[#111b21] dark:text-gray-100 placeholder-transparent"
+                            onKeyDown={(e) => e.key === 'Enter' && verifyArchivePin()}
+                            className="w-full text-center text-2xl tracking-[0.5em] font-medium py-2 border-b-2 border-purple-500 bg-transparent outline-none mb-2 text-[#111b21] dark:text-gray-100 placeholder-transparent"
                             placeholder="****"
                             autoFocus
                         />
 
-                        {error && <p className="text-red-500 text-xs mb-4">{error}</p>}
+                        {archiveError && <p className="text-red-500 text-xs mb-4">{archiveError}</p>}
 
                         <div className="flex gap-3 w-full mt-4">
-                            <button onClick={() => setIsLockModalOpen(false)} className="flex-1 py-2 text-wa-teal font-medium hover:bg-wa-grayBg dark:hover:bg-wa-dark-hover rounded-full transition-colors">
+                            <button onClick={() => setArchiveTarget(null)} className="flex-1 py-2 text-purple-500 font-medium hover:bg-wa-grayBg dark:hover:bg-wa-dark-hover rounded-full transition-colors">
                                 Cancel
                             </button>
-                            <button onClick={verifyPin} className="flex-1 py-2 bg-wa-teal text-white font-medium rounded-full shadow-sm hover:shadow-md transition-all">
+                            <button onClick={verifyArchivePin} className="flex-1 py-2 bg-purple-500 text-white font-medium rounded-full shadow-sm hover:shadow-md transition-all">
+                                Unlock
+                            </button>
+                        </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* Locked Chat Access PIN Modal */}
+            {lockedChatTarget && createPortal(
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                    <div className="bg-white dark:bg-wa-dark-paper rounded-lg shadow-xl w-full max-w-xs p-6 flex flex-col items-center">
+                        <div className="w-12 h-12 bg-green-500 rounded-full flex items-center justify-center mb-4 text-white">
+                            <Lock size={24} />
+                        </div>
+                        <h3 className="text-lg font-medium text-[#111b21] dark:text-gray-100 mb-2">Locked Chat</h3>
+                        <p className="text-sm text-[#667781] dark:text-gray-400 mb-6 text-center">Enter PIN to access locked chat</p>
+
+                        <input
+                            type="password"
+                            maxLength={4}
+                            value={chatLockPin}
+                            onChange={(e) => {
+                                setChatLockPin(e.target.value);
+                                setChatLockError('');
+                            }}
+                            onKeyDown={(e) => e.key === 'Enter' && verifyChatLockPin()}
+                            className="w-full text-center text-2xl tracking-[0.5em] font-medium py-2 border-b-2 border-green-500 bg-transparent outline-none mb-2 text-[#111b21] dark:text-gray-100 placeholder-transparent"
+                            placeholder="****"
+                            autoFocus
+                        />
+
+                        {chatLockError && <p className="text-red-500 text-xs mb-4">{chatLockError}</p>}
+
+                        <div className="flex gap-3 w-full mt-4">
+                            <button onClick={() => setLockedChatTarget(null)} className="flex-1 py-2 text-green-500 font-medium hover:bg-wa-grayBg dark:hover:bg-wa-dark-hover rounded-full transition-colors">
+                                Cancel
+                            </button>
+                            <button onClick={verifyChatLockPin} className="flex-1 py-2 bg-green-500 text-white font-medium rounded-full shadow-sm hover:shadow-md transition-all">
                                 Unlock
                             </button>
                         </div>
@@ -163,13 +253,19 @@ const ChatList = () => {
                         ${isActive ? 'bg-[#f0f2f5]/90 dark:bg-[#2a3942]/90' : 'hover:bg-wa-grayBg/80 dark:hover:bg-wa-dark-hover/80 active:bg-[#e9edef]/80 dark:active:bg-wa-dark-paper/80'}
                         ${chatSettings.chatListBackgroundImage ? 'bg-white/70 dark:bg-black/60 mb-0.5 backdrop-blur-sm' : ''}
                     `}
-                                onClick={() => navigate(`/chat/${chat.id}`)}
+                                onClick={() => handleChatClick(chat)}
                             >
                                 <div className="relative shrink-0">
                                     <img src={chat.isGroup ? 'https://picsum.photos/300' : user?.avatar} alt={user?.name} className="w-12 h-12 rounded-full object-cover" />
                                     {/* Online indicator for individual chats */}
                                     {!chat.isGroup && onlineUsers?.has(chat.contactId) && (
                                         <div className="absolute bottom-0 right-0 w-3 h-3 bg-green-500 border-2 border-white dark:border-wa-dark-bg rounded-full"></div>
+                                    )}
+                                    {/* Lock indicator for locked chats */}
+                                    {chat.isLocked && (
+                                        <div className="absolute top-0 right-0 w-4 h-4 bg-green-500 rounded-full flex items-center justify-center border border-white dark:border-wa-dark-bg">
+                                            <Lock size={10} className="text-white" />
+                                        </div>
                                     )}
                                 </div>
 
@@ -229,8 +325,8 @@ const ChatList = () => {
                                         {chat.isPinned ? <PinOff size={16} /> : <Pin size={16} />}
                                     </button>
                                     <button
-                                        onClick={(e) => { e.stopPropagation(); toggleArchiveChat(chat.id); }}
-                                        className="bg-white dark:bg-wa-dark-paper shadow rounded-full p-1.5 text-wa-gray hover:text-wa-teal transition-colors"
+                                        onClick={(e) => { e.stopPropagation(); handleArchiveAction(chat.id); }}
+                                        className="bg-white dark:bg-wa-dark-paper shadow rounded-full p-1.5 text-wa-gray hover:text-purple-500 transition-colors"
                                         title="Archive chat"
                                     >
                                         <Archive size={16} />

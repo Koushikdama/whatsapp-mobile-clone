@@ -135,6 +135,7 @@ class MigrationService {
                 isAppLockEnabled: false,
                 dailyLockPassword: '',
                 chatLockPassword: '',
+                archiveLockPassword: '',
                 fingerprintEnabled: false,
                 autoLockTime: 300000
             },

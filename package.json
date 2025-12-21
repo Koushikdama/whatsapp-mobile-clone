@@ -39,5 +39,9 @@
     "@vitejs/plugin-react": "^5.0.0",
     "terser": "^5.44.1",
     "vite": "^6.2.0"
+  },
+  "overrides": {
+    "react": "$react",
+    "react-dom": "$react-dom"
   }
 }
