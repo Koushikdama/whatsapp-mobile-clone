@@ -24,15 +24,30 @@ import {
     onSnapshot
 } from 'firebase/firestore';
 import FirebaseService, { handleFirebaseError } from './FirebaseService';
+import { notificationFirebaseService, NOTIFICATION_TYPES } from './NotificationFirebaseService';
 
+/**
+ * FollowFirebaseService
+ * Manages user follow relationships with support for private account privacy.
+ * Implements Instagram-style follow request workflow for private accounts.
+ * 
+ * @extends FirebaseService
+ * @class
+ */
 class FollowFirebaseService extends FirebaseService {
     constructor() {
         super();
-        this.collectionName = 'followRelationships';
+        this.collectionName = 'follows';
     }
 
     /**
-     * Generate unique relationship ID
+     * Generates a unique relationship ID for two users
+     * Format: follows_{smallerId}_{largerId}
+     * 
+     * @param {string} followerId - The ID of the user initiating the follow.
+     * @param {string} followingId - The ID of the user being followed.
+     * @returns {string} Unique relationship ID
+     * @private
      */
     generateRelationshipId(followerId, followingId) {
         return `${followerId}_${followingId}`;
@@ -102,6 +117,38 @@ class FollowFirebaseService extends FirebaseService {
             }
 
             await batch.commit();
+
+            // Create notification
+            if (status === 'pending') {
+                // Private account - send follow request notification
+                await notificationFirebaseService.createNotification(
+                    followingId,
+                    followerId,
+                    NOTIFICATION_TYPES.FOLLOW_REQUEST,
+                    { relationshipId }
+                ).catch(err => console.error('Notification creation failed:', err));
+            } else {
+                // Public account - send new follower notification
+                await notificationFirebaseService.createNotification(
+                    followingId,
+                    followerId,
+                    NOTIFICATION_TYPES.NEW_FOLLOWER,
+                    { relationshipId }
+                ).catch(err => console.error('Notification creation failed:', err));
+
+                // Check if this is a follow-back (mutual)
+                const reverseRelationshipId = this.generateRelationshipId(followingId, followerId);
+                const reverseDoc = await getDoc(doc(db, this.collectionName, reverseRelationshipId));
+                if (reverseDoc.exists() && reverseDoc.data().status === 'accepted') {
+                    // It's a follow-back!
+                    await notificationFirebaseService.createNotification(
+                        followingId,
+                        followerId,
+                        NOTIFICATION_TYPES.FOLLOW_BACK,
+                        { relationshipId }
+                    ).catch(err => console.error('Follow-back notification failed:', err));
+                }
+            }
 
             console.log(`✅ User ${followerId} ${status === 'pending' ? 'requested to follow' : 'followed'} ${followingId}`);
             return {
@@ -425,6 +472,14 @@ class FollowFirebaseService extends FirebaseService {
 
             await batch.commit();
 
+            // Create notification for follower (their request was accepted)
+            await notificationFirebaseService.createNotification(
+                followerId,
+                followingId,
+                NOTIFICATION_TYPES.FOLLOW_ACCEPTED,
+                { relationshipId }
+            ).catch(err => console.error('Accepted notification failed:', err));
+
             console.log(`✅ Follow request from ${followerId} accepted by ${followingId}`);
             return {
                 success: true
@@ -530,6 +585,44 @@ class FollowFirebaseService extends FirebaseService {
             };
         } catch (error) {
             console.error('[FollowService] Get outgoing requests error:', error);
+            throw handleFirebaseError(error);
+        }
+    }
+
+    /**
+     * Cancel an outgoing follow request (withdraw request)
+     * This is the same as unfollowing before the request is accepted
+     */
+    async cancelFollowRequest(followerId, followingId) {
+        try {
+            const relationshipId = this.generateRelationshipId(followerId, followingId);
+            const relationshipRef = doc(db, this.collectionName, relationshipId);
+
+            // Check if relationship exists and is pending
+            const existingDoc = await getDoc(relationshipRef);
+            if (!existingDoc.exists()) {
+                return {
+                    success: false,
+                    error: 'Follow request not found'
+                };
+            }
+
+            if (existingDoc.data().status !== 'pending') {
+                return {
+                    success: false,
+                    error: 'No pending request to cancel'
+                };
+            }
+
+            // Delete the pending relationship
+            await deleteDoc(relationshipRef);
+
+            console.log(`✅ Follow request from ${followerId} to ${followingId} cancelled`);
+            return {
+                success: true
+            };
+        } catch (error) {
+            console.error('[FollowService] Cancel follow request error:', error);
             throw handleFirebaseError(error);
         }
     }

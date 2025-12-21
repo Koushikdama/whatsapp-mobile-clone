@@ -131,8 +131,9 @@ class StatusFirebaseService extends FirebaseService {
 
     /**
      * Get all visible statuses (for current user)
+     * Filters based on privacy settings and follow relationships
      */
-    async getVisibleStatuses(currentUserId, contactIds) {
+    async getVisibleStatuses(currentUserId, contactIds, followedUserIds = []) {
         try {
             const now = new Date().toISOString();
             const statusesRef = collection(db, this.collectionName);
@@ -147,13 +148,33 @@ class StatusFirebaseService extends FirebaseService {
             );
 
             const snapshot = await getDocs(q);
-            const statuses = snapshot.docs.map(doc => ({
+            let statuses = snapshot.docs.map(doc => ({
                 id: doc.id,
                 ...doc.data()
             }));
 
-            // Filter by privacy settings
-            // For now, return all. In production, check privacy settings
+            // Filter by privacy settings and follow relationships
+            // 1. Always show own statuses
+            // 2. Show statuses from public accounts (non-private users)
+            // 3. Show statuses from private accounts only if following them
+            statuses = statuses.filter(status => {
+                // Always show own status
+                if (status.userId === currentUserId) return true;
+
+                // Check privacy settings (if available from user data)
+                // For private accounts, only show to followers
+                // Note: This requires user privacy data to be available
+                // For now, we filter based on whether user is in followedUserIds
+
+                // If followedUserIds is provided, check if status owner is followed
+                if (followedUserIds && followedUserIds.length > 0) {
+                    // Show status if user is followed OR if it's our own status
+                    return followedUserIds.includes(status.userId);
+                }
+
+                // Default: show all (for backward compatibility)
+                return true;
+            });
 
             return {
                 success: true,

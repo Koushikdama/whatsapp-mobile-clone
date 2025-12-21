@@ -16,12 +16,18 @@ const ArchivedChats = lazy(() => import('../../features/chat/components/Archived
 const UserProfile = lazy(() => import('../../features/users/components/UserProfile'));
 const PrivacySettings = lazy(() => import('../../features/settings/components/PrivacySettings'));
 const FollowRequests = lazy(() => import('../../features/users/components/FollowRequests'));
+const BlockedUsersList = lazy(() => import('../../features/settings/components/BlockedUsersList'));
+const NotificationsPage = lazy(() => import('../../features/notifications/components/NotificationsPage'));
+const GroupSettings = lazy(() => import('../../features/groups/components/GroupSettings'));
+const GroupParticipants = lazy(() => import('../../features/groups/components/GroupParticipants'));
+const GroupPermissions = lazy(() => import('../../features/groups/components/GroupPermissions'));
 
 import { useApp } from '../../shared/context/AppContext';
 import { useOnlineStatus } from '../../shared/hooks/useOnlineStatus';
 import useResponsive from '../../shared/hooks/useResponsive';
 import GlobalGameUI from '../../features/games/components/GlobalGameUI';
 import CallOverlay from '../../features/call/components/CallOverlay';
+import NotificationBell from '../../shared/components/NotificationBell';
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -54,7 +60,10 @@ const MobileLayout = () => {
         location.pathname.includes('/profile/') ||
         location.pathname.includes('/starred') ||
         location.pathname === '/privacy' ||
-        location.pathname === '/follow-requests';
+        location.pathname === '/follow-requests' ||
+        location.pathname === '/settings/blocked-users' ||
+        location.pathname === '/notifications' ||
+        location.pathname.startsWith('/group/');
 
     useEffect(() => {
         // Reset search when changing tabs, but keep it if toggling search UI
@@ -92,6 +101,11 @@ const MobileLayout = () => {
                         <Route path="/profile/:userId" element={<UserProfile />} />
                         <Route path="/privacy" element={<PrivacySettings />} />
                         <Route path="/follow-requests" element={<FollowRequests />} />
+                        <Route path="/settings/blocked-users" element={<BlockedUsersList />} />
+                        <Route path="/notifications" element={<NotificationsPage />} />
+                        <Route path="/group/:groupId/settings" element={<GroupSettings />} />
+                        <Route path="/group/:groupId/participants" element={<GroupParticipants />} />
+                        <Route path="/group/:groupId/permissions" element={<GroupPermissions />} />
                     </Routes>
                 </Suspense>
                 <CallOverlay />
@@ -122,6 +136,7 @@ const MobileLayout = () => {
                                 {currentUser?.name || 'User'}
                             </span>
                             <div className="flex gap-5">
+                                    <NotificationBell />
                                 <Search size={22} onClick={() => setShowSearch(true)} className="cursor-pointer" />
                             </div>
                         </>

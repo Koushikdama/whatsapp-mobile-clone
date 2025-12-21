@@ -15,17 +15,23 @@ service cloud.firestore {
       return isAuthenticated() && request.auth.uid in participants;
     }
     
+    // Check if user is involved in a follow relationship
+    function isFollowParticipant(followerId, followingId) {
+      return isAuthenticated() && (request.auth.uid == followerId || request.auth.uid == followingId);
+    }
+    
     // Users collection
     match /users/{userId} {
-      // Anyone can read user profiles
+      // Anyone can read user profiles (needed for follow system)
       allow read: if isAuthenticated();
       
       // Users can create their own profile
       allow create: if isOwner(userId);
       
-      // Update: Allow owner changes OR follow-related updates (followers/following counts)
+      // Update: Allow owner changes OR follow-related updates from follow service
       allow update: if isAuthenticated() && (
         isOwner(userId) || 
+        // Allow follow service to update followers/following arrays and counts
         request.resource.data.diff(resource.data).affectedKeys().hasOnly(['followers', 'followersCount', 'following', 'followingCount'])
       );
       
@@ -44,7 +50,7 @@ service cloud.firestore {
       }
     }
 
-    // Messages Collection (NEW)
+    // Messages Collection
     match /messages/{messageId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid;
@@ -77,12 +83,50 @@ service cloud.firestore {
       allow write: if false;
     }
     
-    // Follow relationships collection
+    // Follow relationships collection (UPDATED to match code: 'follows' not 'followRelationships')
+    match /follows/{relationshipId} {
+      // Read: Anyone authenticated can read follow relationships
+      // (needed to check follow status, get followers/following lists)
+      allow read: if isAuthenticated();
+      
+      // Create: Only the follower can create a follow relationship for themselves
+      allow create: if isAuthenticated() && request.resource.data.followerId == request.auth.uid;
+      
+      // Update: Either participant can update (for accepting/rejecting requests)
+      // Follower can update to cancel, followingId user can update to accept/reject
+      allow update: if isAuthenticated() && (
+        resource.data.followerId == request.auth.uid ||  // Follower can cancel
+        resource.data.followingId == request.auth.uid     // Target can accept/reject
+      );
+      
+      // Delete: Either the follower (to unfollow) or the target (to remove follower) can delete
+      allow delete: if isAuthenticated() && (
+        resource.data.followerId == request.auth.uid ||   // Follower can unfollow
+        resource.data.followingId == request.auth.uid     // Target can remove follower
+      );
+    }
+    
+    // LEGACY: Keep old collection name for backward compatibility
     match /followRelationships/{relationshipId} {
       allow read: if isAuthenticated();
       allow create: if isAuthenticated() && request.resource.data.followerId == request.auth.uid;
       allow delete: if isAuthenticated() && resource.data.followerId == request.auth.uid;
-      allow update: if isAuthenticated(); // Allow accepting/rejecting requests
+      allow update: if isAuthenticated();
+    }
+    
+    // Notifications collection
+    match /notifications/{notificationId} {
+      // Read: Users can only read their own notifications
+      allow read: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      // Create: Any authenticated user can create notifications (for other users)
+      allow create: if isAuthenticated();
+      
+      // Update: Users can only update their own notifications (mark as read)
+      allow update: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      
+      // Delete: Users can delete their own notifications
+      allow delete: if isAuthenticated() && resource.data.userId == request.auth.uid;
     }
   }
 }

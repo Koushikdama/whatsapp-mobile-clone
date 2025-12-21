@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useState, useEffect, useMemo, lazy, Suspense } from 'react';
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import { MessageCircle, Phone, CircleDashed, Settings, Search } from 'lucide-react';
 
@@ -11,12 +11,21 @@ import SettingsTab from '../../features/settings/components/SettingsTab';
 import NewChat from '../../features/chat/components/NewChat';
 import GroupInfo from '../../features/chat/components/GroupInfo';
 import ArchivedChats from '../../features/chat/components/ArchivedChats';
+import UserProfile from '../../features/users/components/UserProfile';
+const PrivacySettings = lazy(() => import('../../features/settings/components/PrivacySettings'));
+const FollowRequests = lazy(() => import('../../features/users/components/FollowRequests'));
+const BlockedUsersList = lazy(() => import('../../features/settings/components/BlockedUsersList'));
+const NotificationsPage = lazy(() => import('../../features/notifications/components/NotificationsPage'));
+const GroupSettings = lazy(() => import('../../features/groups/components/GroupSettings'));
+const GroupParticipants = lazy(() => import('../../features/groups/components/GroupParticipants'));
+const GroupPermissions = lazy(() => import('../../features/groups/components/GroupPermissions'));
 
 import { useApp } from '../../shared/context/AppContext';
 import { useOnlineStatus } from '../../shared/hooks/useOnlineStatus';
 import useResponsive from '../../shared/hooks/useResponsive';
 import GlobalGameUI from '../../features/games/components/GlobalGameUI';
 import CallOverlay from '../../features/call/components/CallOverlay';
+import NotificationBell from '../../shared/components/NotificationBell';
 
 const DesktopLayout = () => {
     const navigate = useNavigate();
@@ -91,6 +100,7 @@ const DesktopLayout = () => {
                                 </span>
                             </div>
                             <div className="flex gap-5 text-wa-gray dark:text-gray-400">
+                                <NotificationBell className="text-wa-gray dark:text-gray-400 hover:text-wa-teal dark:hover:text-wa-teal" />
                                 <button 
                                     onClick={() => navigate('/status')} 
                                     className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors"
@@ -134,32 +144,42 @@ const DesktopLayout = () => {
 
                     {/* Content Area */}
                     <div className="flex-1 overflow-y-auto overflow-x-hidden relative bg-white dark:bg-wa-dark-bg">
-                        <Routes>
-                            <Route path="/" element={<ChatList />} />
-                            <Route path="/chats" element={<ChatList />} />
-                            <Route path="/status" element={<UpdatesTab />} />
-                            <Route path="/updates" element={<UpdatesTab />} />
-                            <Route path="/status/privacy" element={<StatusPrivacySettings />} />
-                            <Route path="/calls" element={<CallsTab />} />
-                            <Route path="/settings" element={<SettingsTab />} />
-                            <Route path="/new-chat" element={<NewChat />} />
-                            <Route path="/archived" element={<ArchivedChats />} />
+                        <Suspense fallback={<div>Loading...</div>}>
+                            <Routes>
+                                <Route path="/" element={<ChatList />} />
+                                <Route path="/chats" element={<ChatList />} />
+                                <Route path="/status" element={<UpdatesTab />} />
+                                <Route path="/updates" element={<UpdatesTab />} />
+                                <Route path="/status/privacy" element={<StatusPrivacySettings />} />
+                                <Route path="/calls" element={<CallsTab />} />
+                                <Route path="/settings" element={<SettingsTab />} />
+                                <Route path="/new-chat" element={<NewChat />} />
+                                <Route path="/archived" element={<ArchivedChats />} />
 
-                            {/* On mobile: show chat window in sidebar area (effectively full screen). 
-                    On desktop: show ChatList in sidebar while right side handles content. */}
-                            <Route path="/chat/:chatId" element={
-                                <>
-                                    <div className="md:hidden h-full"><ChatWindow /></div>
-                                    <div className="hidden md:block h-full"><ChatList /></div>
-                                </>
-                            } />
-                            <Route path="/chat/:chatId/info" element={
-                                <>
-                                    <div className="md:hidden h-full"><GroupInfo /></div>
-                                    <div className="hidden md:block h-full"><ChatList /></div>
-                                </>
-                            } />
-                        </Routes>
+                                {/* On mobile: show chat window in sidebar area (effectively full screen). 
+                        On desktop: show ChatList in sidebar while right side handles content. */}
+                                <Route path="/chat/:chatId" element={
+                                    <>
+                                        <div className="md:hidden h-full"><ChatWindow /></div>
+                                        <div className="hidden md:block h-full"><ChatList /></div>
+                                    </>
+                                } />
+                                <Route path="/chat/:chatId/info" element={
+                                    <>
+                                        <div className="md:hidden h-full"><GroupInfo /></div>
+                                        <div className="hidden md:block h-full"><ChatList /></div>
+                                    </>
+                                } />
+                                <Route path="/profile/:userId" element={<UserProfile />} />
+                                <Route path="/privacy" element={<PrivacySettings />} />
+                                <Route path="/follow-requests" element={<FollowRequests />} />
+                                <Route path="/settings/blocked-users" element={<BlockedUsersList />} />
+                                <Route path="/notifications" element={<NotificationsPage />} />
+                                <Route path="/group/:groupId/settings" element={<GroupSettings />} />
+                                <Route path="/group/:groupId/participants" element={<GroupParticipants />} />
+                                <Route path="/group/:groupId/permissions" element={<GroupPermissions />} />
+                            </Routes>
+                        </Suspense>
                     </div>
                 </div>
 

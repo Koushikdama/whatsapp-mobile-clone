@@ -13,11 +13,21 @@ const SettingsTab = lazy(() => import('../../features/settings/components/Settin
 const NewChat = lazy(() => import('../../features/chat/components/NewChat'));
 const GroupInfo = lazy(() => import('../../features/chat/components/GroupInfo'));
 const ArchivedChats = lazy(() => import('../../features/chat/components/ArchivedChats'));
+const UserProfile = lazy(() => import('../../features/users/components/UserProfile'));
+const PrivacySettings = lazy(() => import('../../features/settings/components/PrivacySettings'));
+const FollowRequests = lazy(() => import('../../features/users/components/FollowRequests'));
+const BlockedUsersList = lazy(() => import('../../features/settings/components/BlockedUsersList'));
+const NotificationsPage = lazy(() => import('../../features/notifications/components/NotificationsPage'));
+const GroupSettings = lazy(() => import('../../features/groups/components/GroupSettings'));
+const GroupParticipants = lazy(() => import('../../features/groups/components/GroupParticipants'));
+const GroupPermissions = lazy(() => import('../../features/groups/components/GroupPermissions'));
 
 import { useApp } from '../../shared/context/AppContext';
 import { useOnlineStatus } from '../../shared/hooks/useOnlineStatus';
+import useResponsive from '../../shared/hooks/useResponsive';
 import GlobalGameUI from '../../features/games/components/GlobalGameUI';
 import CallOverlay from '../../features/call/components/CallOverlay';
+import NotificationBell from '../../shared/components/NotificationBell';
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -94,6 +104,7 @@ const TabletLayout = () => {
                                 </span>
                             </div>
                             <div className="flex gap-4 text-wa-gray dark:text-gray-400">
+                                <NotificationBell className="text-wa-gray dark:text-gray-400 hover:text-wa-teal dark:hover:text-wa-teal" />
                                 <button 
                                     onClick={() => navigate('/status')} 
                                     className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full transition-colors"
@@ -153,6 +164,14 @@ const TabletLayout = () => {
                                 <Route path="/chat/:chatId" element={<ChatList />} />
                                 <Route path="/chat/:chatId/info" element={<ChatList />} />
                                 <Route path="/channels/:channelId" element={<ChatList />} />
+                                <Route path="/profile/:userId" element={<UserProfile />} />
+                                <Route path="/privacy" element={<PrivacySettings />} />
+                                <Route path="/follow-requests" element={<FollowRequests />} />
+                                <Route path="/settings/blocked-users" element={<BlockedUsersList />} />
+                                <Route path="/notifications" element={<NotificationsPage />} />
+                                <Route path="/group/:groupId/settings" element={<GroupSettings />} />
+                                <Route path="/group/:groupId/participants" element={<GroupParticipants />} />
+                                <Route path="/group/:groupId/permissions" element={<GroupPermissions />} />
                             </Routes>
                         </Suspense>
                     </div>

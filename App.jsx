@@ -1,4 +1,4 @@
-import React, { useState,useEffect } from 'react';
+import React from 'react';
 import { HashRouter, Routes, Route } from 'react-router-dom';
 
 import Login from './src/features/auth/components/Login';
@@ -15,20 +15,21 @@ import TabletLayout from './src/core/layout/TabletLayout';
 import ProtectedRoute from './src/core/router/ProtectedRoute';
 import useResponsive from './src/shared/hooks/useResponsive';
 
-const App = () => {
-    const { isMobile, isTablet, isDesktop } = useResponsive();
+// Layout Selector Component - Must be inside providers
+const LayoutSelector = () => {
+    const { isMobile, isTablet } = useResponsive();
 
     // Determine which layout to render based on screen size
-    const renderLayout = () => {
-        if (isMobile) {
-            return <MobileLayout />;
-        } else if (isTablet) {
-            return <TabletLayout />;
-        } else {
-            return <DesktopLayout />;
-        }
-    };
+    if (isMobile) {
+        return <MobileLayout />;
+    } else if (isTablet) {
+        return <TabletLayout />;
+    } else {
+        return <DesktopLayout />;
+    }
+};
 
+const App = () => {
     return (
         <AppProvider>
             <GameProvider>
@@ -43,7 +44,7 @@ const App = () => {
                             {/* Protected Main Routes */}
                             <Route path="/*" element={
                                 <ProtectedRoute>
-                                    {renderLayout()}
+                                    <LayoutSelector />
                                 </ProtectedRoute>
                             } />
                         </Routes>
@@ -55,3 +56,4 @@ const App = () => {
 };
 
 export default App;
+
