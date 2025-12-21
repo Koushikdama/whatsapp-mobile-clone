@@ -2,7 +2,7 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User as UserIcon, Bell, Lock, Search, MoreVertical, Star, ThumbsUp, Trash2, LogOut, Pin, Palette, Check, Grid, Image as ImageIcon, Video as VideoIcon, FileText, BarChart2, ChevronRight, Download, Shield, EyeOff, ChevronDown, Unlock, CircleDashed, Plus, Settings, Ban, UserPlus, QrCode, X } from 'lucide-react';
+import { ArrowLeft, User as UserIcon, Bell, Lock, Search, MoreVertical, Star, ThumbsUp, Trash2, LogOut, Pin, Palette, Check, Grid, Image as ImageIcon, Video as VideoIcon, FileText, BarChart2, ChevronRight, Download, Shield, EyeOff, ChevronDown, Unlock, CircleDashed, Plus, Settings, Ban, UserPlus, QrCode, X, Archive } from 'lucide-react';
 import { useApp } from '../../../shared/context/AppContext';
 import { formatTimestamp } from '../../../shared/utils/formatTime';
 import StatusViewer from '../../status/components/StatusViewer';
@@ -20,7 +20,7 @@ const THEME_COLORS = [
 const GroupInfo = () => {
     const { chatId } = useParams();
     const navigate = useNavigate();
-    const { chats, messages, currentUser, currentUserId, users, updateChatTheme, toggleChatLock, securitySettings, chatDocuments, chatSettings, updateGroupRole, updateGroupSettings, addGroupParticipants } = useApp();
+    const { chats, messages, currentUser, currentUserId, users, updateChatTheme, toggleChatLock, toggleArchiveChat, securitySettings, chatDocuments, chatSettings, updateGroupRole, updateGroupSettings, addGroupParticipants } = useApp();
 
     // Tab State
     const [topTab, setTopTab] = useState('public');
@@ -1007,11 +1007,24 @@ const GroupInfo = () => {
                                 </div>
                             </div>
 
+                            {/* Archive Toggle */}
+                            <div className="flex items-center gap-4 cursor-pointer py-2 mb-4" onClick={() => toggleArchiveChat(chatId)}>
+                                <div className="w-6 flex justify-center text-wa-gray dark:text-gray-400"><Archive size={22} /></div>
+                                <div className="flex-1">
+                                    <h3 className="text-base text-[#111b21] dark:text-gray-100">Archive Chat</h3>
+                                    <p className="text-xs text-[#667781] dark:text-gray-500">Hide this chat in archived folder</p>
+                                </div>
+                                <div className={`w-10 h-6 rounded-full p-1 transition-colors ${chat.isArchived ? 'bg-wa-teal' : 'bg-gray-300 dark:bg-gray-600'}`}>
+                                    <div className={`bg-white w-4 h-4 rounded-full shadow-sm transition-transform ${chat.isArchived ? 'translate-x-4' : ''}`}></div>
+                                </div>
+                            </div>
+
+                            {/* Chat Lock Toggle */}
                             <div className="flex items-center gap-4 cursor-pointer py-2" onClick={handleChatLockClick}>
                                 <div className="w-6 flex justify-center text-wa-gray dark:text-gray-400"><Lock size={22} /></div>
                                 <div className="flex-1">
                                     <h3 className="text-base text-[#111b21] dark:text-gray-100">Chat Lock</h3>
-                                    <p className="text-xs text-[#667781] dark:text-gray-500">Lock and hide this chat in Archive</p>
+                                    <p className="text-xs text-[#667781] dark:text-gray-500">Require PIN to access this chat</p>
                                 </div>
                                 <div className={`w-10 h-6 rounded-full p-1 transition-colors ${chat.isLocked ? 'bg-wa-teal' : 'bg-gray-300 dark:bg-gray-600'}`}>
                                     <div className={`bg-white w-4 h-4 rounded-full shadow-sm transition-transform ${chat.isLocked ? 'translate-x-4' : ''}`}></div>

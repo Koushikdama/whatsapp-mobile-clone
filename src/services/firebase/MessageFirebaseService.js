@@ -1,30 +1,33 @@
 /**
  * Message Service  
- * Manages messages using Firebase Realtime Database for real-time performance
+ * Manages messages using Firestore
  */
 
-import { realtimeDb } from '../../config/firebaseConfig';
+import { db } from '../../config/firebaseConfig';
 import { 
-    ref, 
-    get, 
-    set, 
-    update, 
-    remove, 
-    push, 
-    onValue, 
-    off,
+    collection,
+    doc,
+    getDoc,
+    getDocs,
+    setDoc,
+    updateDoc,
+    deleteDoc,
     query,
-    orderByChild,
-    limitToLast,
-    serverTimestamp as realtimeServerTimestamp
-} from 'firebase/database';
+    where,
+    orderBy,
+    limit,
+    onSnapshot,
+    serverTimestamp,
+    writeBatch,
+    increment
+} from 'firebase/firestore';
 import FirebaseService, { handleFirebaseError } from './FirebaseService';
 
 class MessageFirebaseService extends FirebaseService {
     constructor() {
         super();
-        this.messagesPath = 'messages';
-        this.typingPath = 'typing';
+        this.messagesCollection = 'messages';
+        this.chatsCollection = 'chats';
     }
 
     /**
@@ -32,25 +35,47 @@ class MessageFirebaseService extends FirebaseService {
      */
     async sendMessage(chatId, messageData) {
         try {
-            const messagesRef = ref(realtimeDb, `${this.messagesPath}/${chatId}`);
-            const newMessageRef = push(messagesRef);
+            // Clean messageData - remove undefined properties
+            const cleanMessageData = Object.fromEntries(
+                Object.entries(messageData).filter(([_, value]) => value !== undefined)
+            );
+
+            const messageId = cleanMessageData.id || `m_${Date.now()}`;
+            const messageRef = doc(db, this.messagesCollection, messageId);
             
             const message = {
-                id: newMessageRef.key,
+                id: messageId,
                 chatId,
-                senderId: messageData.senderId,
-                text: messageData.text || '',
-                timestamp: Date.now(),
+                senderId: cleanMessageData.senderId,
+                text: cleanMessageData.text || '',
+                timestamp: cleanMessageData.timestamp || new Date().toISOString(),
                 status: 'sent',
-                type: messageData.type || 'text',
-                ...messageData
+                type: cleanMessageData.type || 'text',
+                ...cleanMessageData,
+                createdAt: serverTimestamp()
             };
 
-            await set(newMessageRef, message);
+            await setDoc(messageRef, message);
+
+            // Update chat's lastMessage - create chat if it doesn't exist
+            const chatRef = doc(db, this.chatsCollection, chatId);
+            const chatSnap = await getDoc(chatRef);
+
+            if (chatSnap.exists()) {
+                // Chat exists, just update it
+                await updateDoc(chatRef, {
+                    lastMessage: message.text,
+                    lastMessageId: messageId,
+                    updatedAt: serverTimestamp()
+                });
+            } else {
+                console.log('Chat document does not exist, skipping lastMessage update');
+                // Don't create the chat here - let the chat service handle chat creation
+            }
 
             return {
                 success: true,
-                messageId: newMessageRef.key,
+                messageId,
                 message
             };
         } catch (error) {
@@ -64,26 +89,23 @@ class MessageFirebaseService extends FirebaseService {
      */
     async getMessages(chatId, limitCount = 50) {
         try {
-            const messagesRef = ref(realtimeDb, `${this.messagesPath}/${chatId}`);
-            const messagesQuery = query(messagesRef, limitToLast(limitCount));
+            const messagesRef = collection(db, this.messagesCollection);
+            const q = query(
+                messagesRef,
+                where('chatId', '==', chatId),
+                orderBy('timestamp', 'desc'),
+                limit(limitCount)
+            );
             
-            const snapshot = await get(messagesQuery);
+            const snapshot = await getDocs(q);
             
-            if (!snapshot.exists()) {
-                return {
-                    success: true,
-                    messages: []
-                };
-            }
-
-            const messagesObj = snapshot.val();
-            const messages = Object.keys(messagesObj).map(key => ({
-                ...messagesObj[key],
-                id: key
+            const messages = snapshot.docs.map(doc => ({
+                ...doc.data(),
+                id: doc.id
             }));
 
-            // Sort by timestamp
-            messages.sort((a, b) => a.timestamp - b.timestamp);
+            // Reverse to get chronological order
+            messages.reverse();
 
             return {
                 success: true,
@@ -98,10 +120,10 @@ class MessageFirebaseService extends FirebaseService {
     /**
      * Update message
      */
-    async updateMessage(chatId, messageId, updates) {
+    async updateMessage(messageId, updates) {
         try {
-            const messageRef = ref(realtimeDb, `${this.messagesPath}/${chatId}/${messageId}`);
-            await update(messageRef, updates);
+            const messageRef = doc(db, this.messagesCollection, messageId);
+            await updateDoc(messageRef, updates);
 
             return { success: true };
         } catch (error) {
@@ -113,13 +135,13 @@ class MessageFirebaseService extends FirebaseService {
     /**
      * Delete message
      */
-    async deleteMessage(chatId, messageId, deleteForEveryone = false) {
+    async deleteMessage(messageId, deleteForEveryone = false) {
         try {
-            const messageRef = ref(realtimeDb, `${this.messagesPath}/${chatId}/${messageId}`);
+            const messageRef = doc(db, this.messagesCollection, messageId);
             
             if (deleteForEveryone) {
                 // Mark as deleted
-                await update(messageRef, {
+                await updateDoc(messageRef, {
                     isDeleted: true,
                     text: 'This message was deleted',
                     type: 'text',
@@ -129,7 +151,7 @@ class MessageFirebaseService extends FirebaseService {
                 });
             } else {
                 // Remove completely
-                await remove(messageRef);
+                await deleteDoc(messageRef);
             }
 
             return { success: true };
@@ -142,22 +164,26 @@ class MessageFirebaseService extends FirebaseService {
     /**
      * Delete multiple messages
      */
-    async deleteMessages(chatId, messageIds, deleteForEveryone = false) {
+    async deleteMessages(messageIds, deleteForEveryone = false) {
         try {
-            const updates = {};
+            const batch = writeBatch(db);
             
             for (const messageId of messageIds) {
+                const messageRef = doc(db, this.messagesCollection, messageId);
+
                 if (deleteForEveryone) {
-                    updates[`${this.messagesPath}/${chatId}/${messageId}/isDeleted`] = true;
-                    updates[`${this.messagesPath}/${chatId}/${messageId}/text`] = 'This message was deleted';
-                    updates[`${this.messagesPath}/${chatId}/${messageId}/type`] = 'text';
-                    updates[`${this.messagesPath}/${chatId}/${messageId}/mediaUrl`] = null;
+                    batch.update(messageRef, {
+                        isDeleted: true,
+                        text: 'This message was deleted',
+                        type: 'text',
+                        mediaUrl: null
+                    });
                 } else {
-                    updates[`${this.messagesPath}/${chatId}/${messageId}`] = null;
+                    batch.delete(messageRef);
                 }
             }
 
-            await update(ref(realtimeDb), updates);
+            await batch.commit();
 
             return { success: true };
         } catch (error) {
@@ -169,10 +195,10 @@ class MessageFirebaseService extends FirebaseService {
     /**
      * Update message status (sent/delivered/read)
      */
-    async updateMessageStatus(chatId, messageId, status) {
+    async updateMessageStatus(messageId, status) {
         try {
-            const messageRef = ref(realtimeDb, `${this.messagesPath}/${chatId}/${messageId}`);
-            await update(messageRef, { status });
+            const messageRef = doc(db, this.messagesCollection, messageId);
+            await updateDoc(messageRef, { status });
 
             return { success: true };
         } catch (error) {
@@ -184,10 +210,16 @@ class MessageFirebaseService extends FirebaseService {
     /**
      * Add reaction to message
      */
-    async addReaction(chatId, messageId, userId, emoji) {
+    async addReaction(messageId, userId, emoji) {
         try {
-            const reactionRef = ref(realtimeDb, `${this.messagesPath}/${chatId}/${messageId}/reactions/${userId}`);
-            await set(reactionRef, emoji);
+            const messageRef = doc(db, this.messagesCollection, messageId);
+            const messageSnap = await getDoc(messageRef);
+
+            if (messageSnap.exists()) {
+                const reactions = messageSnap.data().reactions || {};
+                reactions[userId] = emoji;
+                await updateDoc(messageRef, { reactions });
+            }
 
             return { success: true };
         } catch (error) {
@@ -199,10 +231,16 @@ class MessageFirebaseService extends FirebaseService {
     /**
      * Remove reaction from message
      */
-    async removeReaction(chatId, messageId, userId) {
+    async removeReaction(messageId, userId) {
         try {
-            const reactionRef = ref(realtimeDb, `${this.messagesPath}/${chatId}/${messageId}/reactions/${userId}`);
-            await remove(reactionRef);
+            const messageRef = doc(db, this.messagesCollection, messageId);
+            const messageSnap = await getDoc(messageRef);
+
+            if (messageSnap.exists()) {
+                const reactions = messageSnap.data().reactions || {};
+                delete reactions[userId];
+                await updateDoc(messageRef, { reactions });
+            }
 
             return { success: true };
         } catch (error) {
@@ -212,52 +250,12 @@ class MessageFirebaseService extends FirebaseService {
     }
 
     /**
-     * Pin/unpin message
-     */
-    async togglePinMessage(chatId, messageId) {
-        try {
-            const messageRef = ref(realtimeDb, `${this.messagesPath}/${chatId}/${messageId}`);
-            const snapshot = await get(messageRef);
-            
-            if (snapshot.exists()) {
-                const message = snapshot.val();
-                await update(messageRef, { isPinned: !message.isPinned });
-            }
-
-            return { success: true };
-        } catch (error) {
-            console.error('[MessageService] Toggle pin error:', error);
-            throw handleFirebaseError(error);
-        }
-    }
-
-    /**
-     * Star/unstar message
-     */
-    async toggleStarMessage(chatId, messageId) {
-        try {
-            const messageRef = ref(realtimeDb, `${this.messagesPath}/${chatId}/${messageId}`);
-            const snapshot = await get(messageRef);
-            
-            if (snapshot.exists()) {
-                const message = snapshot.val();
-                await update(messageRef, { isStarred: !message.isStarred });
-            }
-
-            return { success: true };
-        } catch (error) {
-            console.error('[MessageService] Toggle star error:', error);
-            throw handleFirebaseError(error);
-        }
-    }
-
-    /**
      * Edit message
      */
-    async editMessage(chatId, messageId, newText) {
+    async editMessage(messageId, newText) {
         try {
-            const messageRef = ref(realtimeDb, `${this.messagesPath}/${chatId}/${messageId}`);
-            await update(messageRef, {
+            const messageRef = doc(db, this.messagesCollection, messageId);
+            await updateDoc(messageRef, {
                 text: newText,
                 isEdited: true,
                 editedAt: Date.now()
@@ -271,140 +269,33 @@ class MessageFirebaseService extends FirebaseService {
     }
 
     /**
-     * Vote on poll
-     */
-    async votePoll(chatId, messageId, optionIds, userId) {
-        try {
-            const messageRef = ref(realtimeDb, `${this.messagesPath}/${chatId}/${messageId}`);
-            const snapshot = await get(messageRef);
-            
-            if (!snapshot.exists()) {
-                throw new Error('Message not found');
-            }
-
-            const message = snapshot.val();
-            if (!message.pollData) {
-                throw new Error('Not a poll message');
-            }
-
-            const updatedOptions = message.pollData.options.map(option => {
-                const voters = option.voters || [];
-                const hasVoted = optionIds.includes(option.id);
-                
-                if (hasVoted && !voters.includes(userId)) {
-                    voters.push(userId);
-                } else if (!hasVoted && voters.includes(userId)) {
-                    const index = voters.indexOf(userId);
-                    voters.splice(index, 1);
-                }
-
-                return { ...option, voters };
-            });
-
-            await update(messageRef, {
-                'pollData/options': updatedOptions
-            });
-
-            return { success: true };
-        } catch (error) {
-            console.error('[MessageService] Vote poll error:', error);
-            throw handleFirebaseError(error);
-        }
-    }
-
-   
-
-/**
-     * Set typing indicator
-     */
-    async setTyping(chatId, userId, isTyping) {
-        try {
-            const typingRef = ref(realtimeDb, `${this.typingPath}/${chatId}/${userId}`);
-            
-            if (isTyping) {
-                await set(typingRef, Date.now());
-            } else {
-                await remove(typingRef);
-            }
-
-            return { success: true };
-        } catch (error) {
-            console.error('[MessageService] Set typing error:', error);
-            // Don't throw for typing indicators
-            return { success: false };
-        }
-    }
-
-    /**
      * Subscribe to messages real-time
      */
     subscribeToMessages(chatId, callback, onError) {
-        const messagesRef = ref(realtimeDb, `${this.messagesPath}/${chatId}`);
+        const messagesRef = collection(db, this.messagesCollection);
+        const q = query(
+            messagesRef,
+            where('chatId', '==', chatId),
+            orderBy('timestamp', 'asc')
+        );
         
-        const handleValue = (snapshot) => {
-            if (snapshot.exists()) {
-                const messagesObj = snapshot.val();
-                const messages = Object.keys(messagesObj).map(key => ({
-                    ...messagesObj[key],
-                    id: key
+        const unsubscribe = onSnapshot(
+            q,
+            (snapshot) => {
+                const messages = snapshot.docs.map(doc => ({
+                    ...doc.data(),
+                    id: doc.id
                 }));
-                
-                // Sort by timestamp
-                messages.sort((a, b) => a.timestamp - b.timestamp);
-                
                 callback(messages);
-            } else {
-                callback([]);
+            },
+            (error) => {
+                console.error('[MessageService] Messages subscription error:', error);
+                if (onError) onError(handleFirebaseError(error));
             }
-        };
+        );
 
-        const handleError = (error) => {
-            console.error('[MessageService] Messages subscription error:', error);
-            if (onError) onError(handleFirebaseError(error));
-        };
-
-        onValue(messagesRef, handleValue, handleError);
-
-        const unsubscribe = () => off(messagesRef, 'value', handleValue);
         this.listeners.set(`messages:${chatId}`, unsubscribe);
-        
-        return unsubscribe;
-    }
 
-    /**
-     * Subscribe to typing indicators
-     */
-    subscribeToTyping(chatId, callback, onError) {
-        const typingRef = ref(realtimeDb, `${this.typingPath}/${chatId}`);
-        
-        const handleValue = (snapshot) => {
-            if (snapshot.exists()) {
-                const typingData = snapshot.val();
-                const typingUsers = Object.keys(typingData).map(userId => ({
-                    userId,
-                    timestamp: typingData[userId]
-                }));
-                
-                // Filter out old typing indicators (>5 seconds)
-                const now = Date.now();
-                const activeTyping = typingUsers.filter(t => now - t.timestamp < 5000);
-                
-                callback(activeTyping.map(t => t.userId));
-            } else {
-                callback([]);
-            }
-        };
-
-        const handleError = (error) => {
-            console.error('[MessageService] Typing subscription error:', error);
-            if (onError) onError(handleFirebaseError(error));
-        };
-
-        onValue(typingRef, handleValue, handleError);
-
-        const unsubscribe = () => off(typingRef, 'value', handleValue);
-        this.listeners.set(`typing:${chatId}`, unsubscribe);
-        
         return unsubscribe;
     }
 }

@@ -200,6 +200,33 @@ class UserService extends FirebaseService {
     }
 
     /**
+     * Get all users
+     */
+    async getAllUsers(maxResults = 50) {
+        try {
+            const usersRef = collection(db, this.collectionName);
+            const q = query(usersRef, limit(maxResults));
+            const snapshot = await getDocs(q);
+
+            const users = [];
+            snapshot.forEach(doc => {
+                users.push({
+                    id: doc.id,
+                    ...doc.data()
+                });
+            });
+
+            return {
+                success: true,
+                users
+            };
+        } catch (error) {
+            console.error('[UserService] Get all users error:', error);
+            throw handleFirebaseError(error);
+        }
+    }
+
+    /**
      * Update user online status
      */
     async updateOnlineStatus(userId, isOnline) {

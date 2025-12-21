@@ -156,10 +156,11 @@ class ChatFirebaseService extends FirebaseService {
     async getUserChats(userId, limitCount = 50) {
         try {
             const chatsRef = collection(db, this.collectionName);
+            // Removed orderBy to avoid requiring composite index
+            // Sorting will be done in JavaScript instead
             const q = query(
                 chatsRef,
                 where('participants', 'array-contains', userId),
-                orderBy('updatedAt', 'desc'),
                 firestoreLimit(limitCount)
             );
 
@@ -179,6 +180,13 @@ class ChatFirebaseService extends FirebaseService {
 
                 chats.push(chatData);
             }
+
+            // Sort by updatedAt in JavaScript instead of Firestore
+            chats.sort((a, b) => {
+                const aTime = a.updatedAt?.toMillis?.() || 0;
+                const bTime = b.updatedAt?.toMillis?.() || 0;
+                return bTime - aTime; // Descending order (newest first)
+            });
 
             return {
                 success: true,
@@ -255,6 +263,41 @@ class ChatFirebaseService extends FirebaseService {
     }
 
     /**
+     * Create or get direct chat between two users
+     * This is a convenience method that checks if chat exists first
+     */
+    async createDirectChat(userId1, userId2) {
+        try {
+            console.log(`📱 Creating/finding direct chat between ${userId1} and ${userId2}`);
+
+            // Try to find existing chat
+            const existingChat = await this.findChatByParticipants([userId1, userId2]);
+
+            if (existingChat) {
+                console.log(`✅ Found existing chat: ${existingChat.id}`);
+                return {
+                    success: true,
+                    chatId: existingChat.id,
+                    chat: existingChat,
+                    isNew: false
+                };
+            }
+
+            // Create new chat
+            console.log('📝 Creating new chat...');
+            const result = await this.createIndividualChat(userId1, userId2);
+
+            return {
+                ...result,
+                isNew: true
+            };
+        } catch (error) {
+            console.error('[ChatService] Create direct chat error:', error);
+            throw handleFirebaseError(error);
+        }
+    }
+
+    /**
      * Update chat (for group info updates)
      */
     async updateChat(chatId, updates) {
@@ -296,7 +339,7 @@ class ChatFirebaseService extends FirebaseService {
     async updateUserChatSettings(chatId, userId, settings) {
         try {
             const settingsRef = doc(db, this.collectionName, chatId, 'userSettings', userId);
-            await updateDoc(settingsRef, settings);
+            await setDoc(settingsRef, settings, { merge: true });
 
             return { success: true };
         } catch (error) {

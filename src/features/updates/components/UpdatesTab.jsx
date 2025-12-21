@@ -1,9 +1,13 @@
-import React, { useState, useRef, useMemo } from 'react';
+import React, { useState, useRef, useMemo, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Lock, BadgeCheck, Camera, Edit2, Archive, ChevronDown, ChevronUp, MoreVertical, Compass, MapPin, ArrowLeft, Plus, Search } from 'lucide-react';
 import { useApp } from '../../../shared/context/AppContext';
 import { formatTimestamp } from '../../../shared/utils/formatTime';
 import StatusViewer from '../../status/components/StatusViewer';
+import UserCard from './UserCard';
+import userService from '../../../services/firebase/UserService';
+import chatFirebaseService from '../../../services/firebase/ChatFirebaseService';
+import { getNonFollowedUsers, filterUsersBySearch } from '../../../shared/utils/userUtils';
 
 // Mock Data for Nearby Friends
 const NEARBY_USERS = [
@@ -37,8 +41,23 @@ const StatusItem = ({ update, isViewed, onClick }) => {
 
 const UpdatesTab = () => {
     const navigate = useNavigate();
-    const { users, currentUserId, statusUpdates, channels, addStatusUpdate, searchQuery, chats, securitySettings } = useApp();
+    const {
+        users, currentUserId, statusUpdates, channels, addStatusUpdate, searchQuery, chats, setChats, securitySettings,
+        followUser, unfollowUser, isFollowing, followedUsers, getMutualConnectionsCount
+    } = useApp();
     const myStatusUser = users[currentUserId];
+
+    // Safety check: If essential data isn't loaded yet, show loading state
+    if (!myStatusUser || !currentUserId) {
+        return (
+            <div className="flex items-center justify-center h-screen bg-white dark:bg-wa-dark-bg">
+                <div className="text-center">
+                    <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-wa-teal mx-auto mb-4"></div>
+                    <p className="text-gray-500 dark:text-gray-400">Loading updates...</p>
+                </div>
+            </div>
+        );
+    }
 
     // UI States
     const [isMenuOpen, setIsMenuOpen] = useState(false);
@@ -51,6 +70,11 @@ const UpdatesTab = () => {
     // Dropdown States
     const [isNearbyExpanded, setIsNearbyExpanded] = useState(false);
     const [radiusFilter, setRadiusFilter] = useState(5); // km
+
+    // Suggestions State (removed 'All' and 'Following' tabs)
+    const [firebaseUsers, setFirebaseUsers] = useState([]);
+    const [userSearchQuery, setUserSearchQuery] = useState('');
+    const [mutualConnections, setMutualConnections] = useState({});
 
     // Upload State
     const fileInputRef = useRef(null);
@@ -99,6 +123,30 @@ const UpdatesTab = () => {
     const filteredNearbyUsers = useMemo(() => {
         return NEARBY_USERS.filter(u => u.distance <= radiusFilter);
     }, [radiusFilter]);
+
+    // Fetch users from Firebase
+    useEffect(() => {
+        const fetchUsers = async () => {
+            try {
+                const result = await userService.getAllUsers(100);
+                if (result.success && result.users.length > 0) {
+                    console.log('✅ Fetched users from Firebase:', result.users.length);
+                    console.log('📊 Firebase users:', result.users);
+                    console.log('👤 Current user ID:', currentUserId);
+                    setFirebaseUsers(result.users);
+                } else {
+                    // No fallback - only show Firebase users in suggestions
+                    console.log('⚠️ No Firebase users found');
+                    setFirebaseUsers([]);
+                }
+            } catch (error) {
+                console.warn('⚠️ Firebase error:', error.message);
+                // Don't fallback to local users - suggestions should only show database users
+                setFirebaseUsers([]);
+            }
+        };
+        fetchUsers();
+    }, [users, currentUserId]);
 
     // --- Handlers ---
     const handleArchiveHeaderClick = () => {
@@ -173,6 +221,40 @@ const UpdatesTab = () => {
 
     const handleChannelClick = (channelId) => {
         navigate(`/channels/${channelId}`);
+    };
+
+    const handleMessageUser = async (userId) => {
+        try {
+            console.log(`💬 Messaging user ${userId}`);
+
+            const user = users[userId];
+            if (!user) {
+                console.error('User not found:', userId);
+                alert('User not found.');
+                return;
+            }
+
+            // Create or find chat
+            const result = await chatFirebaseService.createDirectChat(currentUserId, userId);
+
+            if (result.success) {
+                console.log(`✅ Chat ${result.isNew ? 'created' : 'found'}: ${result.chatId}`);
+
+                // Navigate with user info in state so ChatWindow can use it
+                navigate(`/chat/${result.chatId}`, {
+                    state: {
+                        contactId: userId,
+                        contactName: user.name,
+                        contactAvatar: user.avatar,
+                        contactAbout: user.about
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('❌ Error creating/finding chat:', error);
+            // Show error to user
+            alert('Unable to create chat. Please try again.');
+        }
     };
 
     if (!myStatusUser) return null;
@@ -334,45 +416,142 @@ const UpdatesTab = () => {
                 )}
             </div>
 
+
             <div className="h-[1px] bg-wa-border dark:bg-wa-dark-border mx-4 my-2"></div>
 
-            {/* Channels Section */}
+            {/* Suggestions Section - WhatsApp Channels Style */}
             <div className="mt-2">
-                <div className="px-4 py-2 flex justify-between items-center">
-                    <h2 className="text-lg font-bold text-[#111b21] dark:text-gray-100">Channels</h2>
-                    <button className="text-wa-teal font-medium text-sm">Explore</button>
-                </div>
-                <div className="px-4 text-[#667781] dark:text-gray-400 text-[15px] mb-4">
-                    Stay updated on topics that matter to you. Find channels to follow below.
+                <div
+                    onClick={() => setIsViewedExpanded(!isViewedExpanded)}
+                    className="flex items-center justify-between px-4 py-3 cursor-pointer hover:bg-wa-grayBg dark:hover:bg-wa-dark-hover transition-colors"
+                >
+                    <div>
+                        <h2 className="text-lg font-bold text-[#111b21] dark:text-gray-100">Find People</h2>
+                        <p className="text-xs text-[#667781] dark:text-gray-400">Discover new connections</p>
+                    </div>
+                    <div className="text-[#667781] dark:text-gray-400">
+                        {isViewedExpanded ? <ChevronUp size={20} /> : <ChevronDown size={20} />}
+                    </div>
                 </div>
 
-                <div className="grid grid-cols-2 gap-3 px-4 mb-6">
-                    {channels.slice(0, 4).map(channel => (
-                        <div key={channel.id} onClick={() => handleChannelClick(channel.id)} className="border border-gray-200 dark:border-gray-700 rounded-xl p-4 flex flex-col items-center gap-3 bg-white dark:bg-wa-dark-paper shadow-sm active:scale-95 transition-transform cursor-pointer">
+                {isViewedExpanded && (
+                    <div className="animate-in slide-in-from-top-2 duration-200 px-4 pb-4">
+                        {/* Search Input */}
+                        <div className="mb-3">
                             <div className="relative">
-                                <div className="w-16 h-16 rounded-full p-0.5 border border-gray-100 dark:border-gray-600 bg-white">
-                                    <img src={channel.avatar} alt={channel.name} className="w-full h-full rounded-full object-cover" />
-                                </div>
-                                {channel.isVerified && (
-                                    <div className="absolute bottom-0 right-0 bg-white dark:bg-wa-dark-paper rounded-full p-[2px]">
-                                        <BadgeCheck size={18} className="text-[#008069] fill-white dark:fill-wa-dark-paper" />
-                                    </div>
-                                )}
-                            </div>
-                            <div className="text-center w-full">
-                                <h4 className="text-sm font-semibold text-[#111b21] dark:text-gray-100 truncate leading-tight mb-1">{channel.name}</h4>
-                                <button className="px-6 py-1.5 bg-[#dcf8c6] text-[#008069] dark:bg-[#005c4b]/30 dark:text-[#00a884] rounded-full text-sm font-medium mt-2">
-                                    Follow
-                                </button>
+                                <input
+                                    type="text"
+                                    placeholder="Search suggested users..."
+                                    value={userSearchQuery}
+                                    onChange={(e) => setUserSearchQuery(e.target.value)}
+                                    className="w-full px-4 py-2 pl-10 bg-gray-100 dark:bg-gray-800 text-[#111b21] dark:text-gray-100 rounded-lg border-none outline-none focus:ring-2 focus:ring-blue-500 transition-all text-sm"
+                                />
+                                <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-gray-500" />
                             </div>
                         </div>
-                    ))}
-                </div>
-                <div className="px-4">
-                    <button className="w-full py-2.5 bg-wa-teal text-white rounded-full font-medium shadow-md active:opacity-90 transition-opacity">
-                        Find Channels
-                    </button>
-                </div>
+
+                        {/* Suggestions Grid - Two Rows, Horizontal Scroll */}
+                        <div className="mb-2">
+                            {(() => {
+                                // Only use Firebase users for suggestions (not local JSON users)
+                                const firebaseUsersObj = firebaseUsers.reduce((acc, u) => ({ ...acc, [u.id]: u }), {});
+
+                                // Filter to only show non-followed users from Firebase (suggestions)
+                                const suggestedUsers = getNonFollowedUsers(
+                                    firebaseUsersObj,
+                                    currentUserId,
+                                    isFollowing
+                                );
+
+                                // Apply search filter
+                                const filteredUsers = filterUsersBySearch(suggestedUsers, userSearchQuery);
+
+                                if (filteredUsers.length === 0) {
+                                    return (
+                                        <div className="py-8 text-center text-gray-500 dark:text-gray-400 text-sm">
+                                            {userSearchQuery.trim()
+                                                ? `No users found matching "${userSearchQuery}"`
+                                                : firebaseUsers.length === 0
+                                                    ? 'No users in database yet. Add users to see suggestions!'
+                                                    : 'No suggestions available. All database users are already connected!'}
+                                        </div>
+                                    );
+                                }
+
+                                // Split into two rows for better layout
+                                const halfLength = Math.ceil(filteredUsers.length / 2);
+                                const firstRow = filteredUsers.slice(0, halfLength);
+                                const secondRow = filteredUsers.slice(halfLength);
+
+                                const renderUserCard = (user) => (
+                                    <div
+                                        key={user.id}
+                                        className="flex-shrink-0 w-[140px] border border-gray-200 dark:border-gray-700 rounded-xl p-3 flex flex-col items-center gap-2 bg-white dark:bg-wa-dark-paper shadow-sm hover:shadow-md transition-all"
+                                    >
+                                        {/* Avatar */}
+                                        <div
+                                            onClick={() => handleMessageUser(user.id)}
+                                            className="cursor-pointer"
+                                        >
+                                            <img
+                                                src={user.avatar}
+                                                alt={user.name}
+                                                className="w-16 h-16 rounded-full object-cover"
+                                            />
+                                        </div>
+
+                                        {/* Name */}
+                                        <div className="text-center w-full">
+                                            <h4 className="text-sm font-medium text-[#111b21] dark:text-gray-100 truncate">
+                                                {user.name}
+                                            </h4>
+                                            {mutualConnections[user.id] > 0 && (
+                                                <p className="text-[10px] text-gray-500 dark:text-gray-400">
+                                                    {mutualConnections[user.id]} mutual
+                                                </p>
+                                            )}
+                                        </div>
+
+                                        {/* Follow Button */}
+                                        <button
+                                            onClick={() => {
+                                                if (isFollowing(user.id)) {
+                                                    unfollowUser(user.id);
+                                                } else {
+                                                    followUser(user.id);
+                                                }
+                                            }}
+                                            className={`w-full py-1.5 rounded-lg text-xs font-semibold transition-all ${isFollowing(user.id)
+                                                ? 'bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-300'
+                                                : 'bg-blue-500 text-white hover:bg-blue-600'
+                                                }`}
+                                        >
+                                            {isFollowing(user.id) ? 'Following' : 'Follow'}
+                                        </button>
+                                    </div>
+                                );
+
+                                return (
+                                    <div className="space-y-3">
+                                        {/* First Row */}
+                                        {firstRow.length > 0 && (
+                                            <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+                                                {firstRow.map(renderUserCard)}
+                                            </div>
+                                        )}
+
+                                        {/* Second Row */}
+                                        {secondRow.length > 0 && (
+                                            <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
+                                                {secondRow.map(renderUserCard)}
+                                            </div>
+                                        )}
+                                    </div>
+                                );
+                            })()}
+                        </div>
+                    </div>
+                )}
             </div>
 
             {/* Nearby Friends Section (Moved to bottom or kept here?) */}

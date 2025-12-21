@@ -5,8 +5,11 @@ import { webSocketService, GameEventTypes } from '../../services/WebSocketServic
 import { useLocalStorage, useSessionStorage } from '../hooks/useStorage';
 import { useNotifications } from '../hooks/useNotifications';
 import authService from '../../services/firebase/AuthService';
-import { messageFirebaseService } from '../../services/firebase/MessageFirebaseService';
 import settingsService from '../../services/firebase/SettingsService';
+import chatFirebaseService from '../../services/firebase/ChatFirebaseService';
+import { messageFirebaseService } from '../../services/firebase/MessageFirebaseService';
+import followFirebaseService from '../../services/firebase/FollowFirebaseService';
+import userService from '../../services/firebase/UserService';
 
 const AppContext = createContext(undefined);
 
@@ -94,6 +97,17 @@ export const AppProvider = ({ children }) => {
   // Hidden messages for "Delete for Me" functionality
   const [hiddenMessages, setHiddenMessages] = useLocalStorage('hiddenMessages', {});
 
+  // Follow functionality - Instagram-style (synced with Firebase)
+  const [followedUsers, setFollowedUsers] = useState([]);
+  const [followersCount, setFollowersCount] = useState(0);
+  const [followingCount, setFollowingCount] = useState(0);
+  const [followSubscription, setFollowSubscription] = useState(null);
+  const [newFollowersCount, setNewFollowersCount] = useState(0); // For notification badge
+  const [outgoingRequests, setOutgoingRequests] = useState([]); // Users I have requested to follow
+  const [pendingRequests, setPendingRequests] = useState([]); // Users requesting to follow me
+
+  // === EFFECTS ===
+
   // Firebase Auth State Listener
   useEffect(() => {
     console.log('🔐 Setting up Firebase auth state listener');
@@ -117,18 +131,39 @@ export const AppProvider = ({ children }) => {
               phone: userProfile.phone || '',
               ...userProfile
             });
+
+            // Also update users state to include current user
+            setUsers(prev => ({
+              ...prev,
+              [user.uid]: {
+                id: user.uid,
+                name: userProfile.name || user.displayName || 'User',
+                avatar: userProfile.avatar || user.photoURL,
+                about: userProfile.about || 'Hey there! I am using WhatsApp',
+                ...userProfile
+              }
+            }));
+
             console.log('✅ User profile loaded:', userProfile.name);
           }
         } catch (error) {
           console.error('❌ Error loading user profile:', error);
           // Use basic user info from auth
-          setCurrentUser({
+          const fallbackUser = {
             id: user.uid,
             email: user.email,
             name: user.displayName || 'User',
             avatar: user.photoURL,
             about: 'Hey there! I am using WhatsApp'
-          });
+          };
+
+          setCurrentUser(fallbackUser);
+
+          // Also update users state
+          setUsers(prev => ({
+            ...prev,
+            [user.uid]: fallbackUser
+          }));
         }
         
         // Load settings from Firebase
@@ -172,9 +207,207 @@ export const AppProvider = ({ children }) => {
           // Continue with localStorage values (already loaded)
         }
 
+        // Load follow relationships from Firebase
+        try {
+          console.log('👥 Loading follow relationships from Firebase...');
+
+          // Load who the user is following
+          const { success, following } = await followFirebaseService.getFollowing(user.uid);
+          if (success && following) {
+            const followingIds = following.map(f => f.followingId);
+            console.log('📋 Following IDs to set:', followingIds);
+            setFollowedUsers(followingIds);
+            console.log(`✅ Loaded ${followingIds.length} following relationships`);
+          } else {
+            console.log('⚠️ No following relationships found or failed to load');
+          }
+
+          // Load follow stats
+          const statsResult = await followFirebaseService.getFollowStats(user.uid);
+          if (statsResult.success) {
+            setFollowersCount(statsResult.stats.followersCount);
+            setFollowingCount(statsResult.stats.followingCount);
+            console.log(`✅ Follow stats - Followers: ${statsResult.stats.followersCount}, Following: ${statsResult.stats.followingCount} `);
+          }
+
+          // Load outgoing requests
+          const requestsResult = await followFirebaseService.getOutgoingRequests(user.uid);
+          if (requestsResult.success) {
+            setOutgoingRequests(requestsResult.requests.map(r => r.followingId));
+            console.log(`✅ Loaded ${requestsResult.requests.length} outgoing follow requests`);
+          }
+
+          // Load pending incoming requests
+          const pendingResult = await followFirebaseService.getPendingRequests(user.uid);
+          if (pendingResult.success) {
+            setPendingRequests(pendingResult.requests);
+            console.log(`✅ Loaded ${pendingResult.requests.length} pending follow requests`);
+          }
+
+          // Load all Firebase users into users state
+          try {
+            console.log('👥 Loading all Firebase users...');
+            const { success: usersFetchSuccess, users: firebaseUsersList } = await userService.getAllUsers(100);
+            if (usersFetchSuccess && firebaseUsersList && firebaseUsersList.length > 0) {
+              console.log(`✅ Loaded ${firebaseUsersList.length} Firebase users`);
+              // Convert array to object keyed by ID and merge with existing users
+              const firebaseUsersObj = {};
+              firebaseUsersList.forEach(u => {
+                firebaseUsersObj[u.id] = u;
+              });
+              setUsers(prev => ({
+                ...prev,
+                ...firebaseUsersObj
+              }));
+            }
+          } catch (error) {
+            console.log('⚠️ Could not load Firebase users:', error.message);
+          }
+
+          // Subscribe to real-time follow updates
+          const unsubscribeFollow = followFirebaseService.subscribeToFollowUpdates(
+            user.uid,
+            async (update) => {
+              console.log('📡 Follow update received:', update.type);
+
+              // Reload following list
+              const { success, following } = await followFirebaseService.getFollowing(user.uid);
+              if (success && following) {
+                const followingIds = following.map(f => f.followingId);
+                setFollowedUsers(followingIds);
+              }
+
+              // Reload stats
+              const statsResult = await followFirebaseService.getFollowStats(user.uid);
+              if (statsResult.success) {
+                const previousFollowersCount = followersCount;
+                setFollowersCount(statsResult.stats.followersCount);
+                setFollowingCount(statsResult.stats.followingCount);
+
+                // Check if we have new followers
+                if (update.type === 'followers' && statsResult.stats.followersCount > previousFollowersCount) {
+                  const newFollowers = statsResult.stats.followersCount - previousFollowersCount;
+                  setNewFollowersCount(prev => prev + newFollowers);
+
+                  // Show notification
+                  if (showNotification && newFollowers > 0) {
+                    showNotification(
+                      'New Follower!',
+                      {
+                        body: `You have ${newFollowers} new follower${newFollowers > 1 ? 's' : ''}`,
+                        icon: '/logo.png'
+                      }
+                    );
+                  }
+                }
+              }
+
+              // Reload outgoing requests
+              const reqResult = await followFirebaseService.getOutgoingRequests(user.uid);
+              if (reqResult.success) {
+                setOutgoingRequests(reqResult.requests.map(r => r.followingId));
+              }
+
+              // Reload pending requests
+              const pendResult = await followFirebaseService.getPendingRequests(user.uid);
+              if (pendResult.success) {
+                setPendingRequests(pendResult.requests);
+              }
+            },
+            (error) => {
+              console.error('❌ Follow subscription error:', error);
+            }
+          );
+
+          setFollowSubscription(unsubscribeFollow);
+        } catch (error) {
+          console.error('❌ Error loading follow data:', error);
+          // Continue without follow data
+        }
+
+        // Load chats from Firebase
+        try {
+          console.log('💬 Loading chats from Firebase...');
+          const { success: chatsSuccess, chats: firebaseChats } = await chatFirebaseService.getUserChats(user.uid);
+
+          if (chatsSuccess && firebaseChats && firebaseChats.length > 0) {
+            console.log(`✅ Loaded ${firebaseChats.length} chats from Firebase`);
+
+            // Transform Firebase chats to match app structure
+            const transformedChats = firebaseChats.map(chat => ({
+              id: chat.id,
+              isGroup: chat.type === 'group',
+              groupName: chat.groupName,
+              groupParticipants: chat.participants,
+              groupRoles: chat.groupRoles,
+              groupSettings: chat.groupSettings,
+              contactId: chat.type === 'individual' ? chat.participants.find(p => p !== user.uid) : undefined,
+              timestamp: chat.updatedAt || chat.createdAt,
+              lastMessageId: chat.lastMessageId,
+              unreadCount: chat.userSettings?.unreadCount || 0,
+              isPinned: chat.userSettings?.isPinned || false,
+              isMuted: chat.userSettings?.isMuted || false,
+              isArchived: chat.userSettings?.isArchived || false,
+              isLocked: chat.userSettings?.isLocked || false,
+              // Keep userSettings nested for proper data structure
+              userSettings: {
+                isPinned: chat.userSettings?.isPinned || false,
+                isMuted: chat.userSettings?.isMuted || false,
+                isArchived: chat.userSettings?.isArchived || false,
+                isLocked: chat.userSettings?.isLocked || false,
+                hiddenDates: chat.userSettings?.hiddenDates || [],
+                unreadCount: chat.userSettings?.unreadCount || 0,
+                themeColor: chat.userSettings?.themeColor || null,
+                incomingThemeColor: chat.userSettings?.incomingThemeColor || null,
+                wallpaper: chat.userSettings?.wallpaper || null
+              }
+            }));
+
+            // Merge with existing chats from data.json (keep both)
+            setChats(prev => {
+              const existingIds = new Set(prev.map(c => c.id));
+              const newFirebaseChats = transformedChats.filter(c => !existingIds.has(c.id));
+              return [...transformedChats, ...prev.filter(c => !transformedChats.some(fc => fc.id === c.id))];
+            });
+          } else {
+            console.log('⚠️ No chats found in Firebase');
+          }
+        } catch (error) {
+          console.error('❌ Error loading chats from Firebase:', error);
+          // Continue with local chats
+        }
+
         // Generate session ID
         if (!activeSessionId) {
           setActiveSessionId(`session_${Date.now()}_${user.uid}`);
+        }
+
+        // Subscribe to messages for all chats
+        console.log('📨 Setting up message subscriptions...');
+        try {
+          chats.forEach(chat => {
+            const chatId = chat.id;
+            // Skip if already subscribed
+            if (messageSubscriptions.has(chatId)) return;
+
+            console.log(`Subscribing to messages for chat: ${chatId}`);
+            const unsubscribe = messageFirebaseService.subscribeToMessages(
+              chatId,
+              (loadedMessages) => {
+                console.log(`✅ Loaded ${loadedMessages.length} messages for chat ${chatId}`);
+                setMessages(prev => ({
+                  ...prev,
+                  [chatId]: loadedMessages
+                }));
+              },
+              (error) => {
+                console.error(`❌ Error loading messages for chat ${chatId}:`, error);
+              }
+            );
+            setMessageSubscriptions(prev => new Map(prev).set(chatId, unsubscribe));
+          });
+        } catch (error) {
+          console.error('❌ Error setting up message subscriptions:', error);
         }
       } else {
         // User logged out - cleanup
@@ -184,6 +417,18 @@ export const AppProvider = ({ children }) => {
         // Cleanup all message subscriptions
         messageSubscriptions.forEach(unsubscribe => unsubscribe());
         setMessageSubscriptions(new Map());
+
+        // Cleanup follow subscription
+        if (followSubscription) {
+          followSubscription();
+          setFollowSubscription(null);
+        }
+
+        // Clear follow data
+        setFollowedUsers([]);
+        setFollowersCount(0);
+        setFollowingCount(0);
+        setOutgoingRequests([]);
       }
       
       setAuthLoading(false);
@@ -194,6 +439,44 @@ export const AppProvider = ({ children }) => {
       unsubscribe();
     };
   }, []);
+
+  // Subscribe to messages for all chats (runs whenever chats array changes)
+  useEffect(() => {
+    if (!currentUser?.id || chats.length === 0) return;
+
+    console.log(`📨 Checking message subscriptions... (${chats.length} chats)`);
+
+    chats.forEach(chat => {
+      const chatId = chat.id;
+
+      // Skip if already subscribed
+      if (messageSubscriptions.has(chatId)) {
+        return;
+      }
+
+      console.log(`📨 Subscribing to messages for NEW chat: ${chatId}`);
+
+      try {
+        const unsubscribe = messageFirebaseService.subscribeToMessages(
+          chatId,
+          (loadedMessages) => {
+            console.log(`✅ Loaded ${loadedMessages.length} messages for chat ${chatId}`);
+            setMessages(prev => ({
+              ...prev,
+              [chatId]: loadedMessages
+            }));
+          },
+          (error) => {
+            console.error(`❌ Error loading messages for chat ${chatId}:`, error);
+          }
+        );
+
+        setMessageSubscriptions(prev => new Map(prev).set(chatId, unsubscribe));
+      } catch (error) {
+        console.error(`❌ Failed to subscribe to chat ${chatId}:`, error);
+      }
+    });
+  }, [chats, currentUser]);
 
   // Initialize data when fetched
   useEffect(() => {
@@ -440,10 +723,48 @@ export const AppProvider = ({ children }) => {
     ));
   }, []);
 
-  const startChat = useCallback((contactId) => {
+  const startChat = useCallback(async (contactId) => {
+  // Check if chat already exists locally
     const existingChat = chats.find(c => c.contactId === contactId && !c.isGroup);
     if (existingChat) return existingChat.id;
 
+    // Create or get chat from Firebase
+    try {
+      console.log(`💬 Creating/fetching chat with contact: ${contactId}`);
+      const result = await chatFirebaseService.createDirectChat(currentUser.id, contactId);
+
+      if (result.success && result.chat) {
+        const firebaseChat = result.chat;
+        console.log(`✅ Chat ${result.isNew ? 'created' : 'found'}: ${firebaseChat.id}`);
+
+        // Transform Firebase chat to app structure
+        const newChat = {
+          id: firebaseChat.id,
+          contactId: contactId,
+          unreadCount: 0,
+          isPinned: false,
+          isMuted: false,
+          isGroup: false,
+          timestamp: firebaseChat.updatedAt || firebaseChat.createdAt || new Date().toISOString()
+        };
+
+        // Add to local state if not already there
+        setChats(prev => {
+          const exists = prev.find(c => c.id === firebaseChat.id);
+          if (exists) return prev;
+          return [newChat, ...prev];
+        });
+
+        // Initialize messages array
+        setMessages(prev => ({ ...prev, [firebaseChat.id]: [] }));
+
+        return firebaseChat.id;
+      }
+    } catch (error) {
+      console.error('❌ Error creating chat in Firebase:', error);
+    }
+
+    // Fallback to local chat creation  if Firebase fails
     const newChatId = `c_${Date.now()}`;
     const newChat = {
       id: newChatId,
@@ -459,7 +780,7 @@ export const AppProvider = ({ children }) => {
     setMessages(prev => ({ ...prev, [newChatId]: [] }));
 
     return newChatId;
-  }, [chats]);
+  }, [chats, currentUser]);
 
   const createGroup = useCallback((groupName, participantIds) => {
     const newChatId = `c_g_${Date.now()}`;
@@ -597,7 +918,7 @@ export const AppProvider = ({ children }) => {
     });
   }, []);
 
-  const addMessage = useCallback((chatId, text, type, replyToId, mediaUrl, duration, pollData, isViewOnce) => {
+  const addMessage = useCallback(async (chatId, text, type, replyToId, mediaUrl, duration, pollData, isViewOnce) => {
     const newMessage = {
       id: `m_${Date.now()}`,
       chatId,
@@ -613,6 +934,7 @@ export const AppProvider = ({ children }) => {
       isViewOnce
     };
 
+    // Optimistic update - show immediately in UI
     setMessages(prev => ({
       ...prev,
       [chatId]: [...(prev[chatId] || []), newMessage]
@@ -628,13 +950,29 @@ export const AppProvider = ({ children }) => {
         lastMessageId: newMessage.id,
         isArchived: prev[chatIndex].isLocked ? true : false
       };
-      if (prev[chatIndex].isLocked) {
-        updatedChat.isArchived = true;
-      }
       const newChats = [...prev];
+      newChats[chatIndex] = updatedChat;
+
+      // Move to top of list
       newChats.splice(chatIndex, 1);
-      return [updatedChat, ...newChats];
+      newChats.unshift(updatedChat);
+
+      return newChats;
     });
+
+    // Save to Firebase
+    try {
+      // Clean message object - remove undefined properties
+      const cleanMessage = Object.fromEntries(
+        Object.entries(newMessage).filter(([_, value]) => value !== undefined)
+      );
+
+      await messageFirebaseService.sendMessage(chatId, cleanMessage);
+      console.log('✅ Message saved to Firebase');
+    } catch (error) {
+      console.error('❌ Error saving message to Firebase:', error);
+      // Message already shown optimistically, so we don't need to revert
+    }
 
     // Simulate message delivery status progression
     // sent -> delivered (1 second) -> read (when chat is next opened)
@@ -724,11 +1062,27 @@ export const AppProvider = ({ children }) => {
     }
   }, [deleteForMe, deleteForEveryone]);
 
-  const toggleArchiveChat = useCallback((chatId) => {
+  const toggleArchiveChat = useCallback(async (chatId) => {
+  // 1. Optimistic Update
     setChats(prev => prev.map(chat =>
       chat.id === chatId ? { ...chat, isArchived: !chat.isArchived } : chat
     ));
-  }, []);
+
+    // 2. Persist to Firestore
+    try {
+      const chat = chats.find(c => c.id === chatId);
+      if (chat) {
+        const newArchived = !chat.isArchived;
+        await chatFirebaseService.updateUserChatSettings(chatId, currentUser.id, {
+          isArchived: newArchived
+        });
+        console.log(`✅ Chat ${newArchived ? 'archived' : 'unarchived'} successfully`);
+      }
+    } catch (error) {
+      console.error('Failed to persist archive status:', error);
+      // Optionally revert state here
+    }
+  }, [chats, currentUser]);
 
   const togglePinChat = useCallback((chatId) => {
     setChats(prev => prev.map(chat =>
@@ -758,6 +1112,131 @@ export const AppProvider = ({ children }) => {
         )
       };
     });
+  }, []);
+
+  // Follow/Unfollow Functions - Firebase integrated
+  const followUser = useCallback(async (userId) => {
+    if (!currentUser?.id) {
+      console.error('❌ Cannot follow: No current user');
+      return;
+    }
+
+    try {
+      // Optimistic update
+      setFollowedUsers(prev => {
+        if (!prev.includes(userId)) {
+          return [...prev, userId];
+        }
+        return prev;
+      });
+      setFollowingCount(prev => prev + 1);
+
+      // Call Firebase service
+      const result = await followFirebaseService.followUser(currentUser.id, userId);
+
+      if (result.success) {
+        console.log(`✅ Successfully followed user ${userId} `);
+
+        // Show notification to the user being followed (if they have notifications enabled)
+        // Note: In a real app, this would be handled server-side via Cloud Functions
+        // For now, we'll show a local notification
+        const followedUserName = users[userId]?.name || 'User';
+        if (showNotification) {
+          showNotification(
+            'New Follower',
+            {
+              body: `You started following ${followedUserName} `,
+              icon: users[userId]?.avatar || '/default-avatar.png'
+            }
+          );
+        }
+      } else {
+        // Revert optimistic update
+        setFollowedUsers(prev => prev.filter(id => id !== userId));
+        setFollowingCount(prev => Math.max(0, prev - 1));
+      }
+    } catch (error) {
+      console.error('❌ Error following user:', error);
+      // Revert optimistic update
+      setFollowedUsers(prev => prev.filter(id => id !== userId));
+      setFollowingCount(prev => Math.max(0, prev - 1));
+    }
+  }, [currentUser, users, showNotification]);
+
+  const unfollowUser = useCallback(async (userId) => {
+    if (!currentUser?.id) {
+      console.error('❌ Cannot unfollow: No current user');
+      return;
+    }
+
+    try {
+      // Optimistic update
+      setFollowedUsers(prev => prev.filter(id => id !== userId));
+      setFollowingCount(prev => Math.max(0, prev - 1));
+
+      // Call Firebase service
+      const result = await followFirebaseService.unfollowUser(currentUser.id, userId);
+
+      if (result.success) {
+        console.log(`✅ Successfully unfollowed user ${userId} `);
+      }
+    } catch (error) {
+      console.error('❌ Error unfollowing user:', error);
+      // Revert optimistic update
+      setFollowedUsers(prev => [...prev, userId]);
+      setFollowingCount(prev => prev + 1);
+    }
+  }, [currentUser]);
+
+  const isFollowing = useCallback((userId) => {
+    return followedUsers.includes(userId);
+  }, [followedUsers]);
+
+  /**
+   * Get mutual connections count (users who both follow each other)
+   */
+  const getMutualConnectionsCount = useCallback(async (userId) => {
+    try {
+      if (!currentUser?.id) return 0;
+
+      // Get who the current user follows
+      const myFollowing = followedUsers;
+
+      // Get who the other user follows
+      const { success, following } = await followFirebaseService.getFollowing(userId);
+
+      if (!success || !following) return 0;
+
+      const theirFollowing = following.map(f => f.followingId);
+
+      // Find mutual follows (people both users follow)
+      const mutualCount = myFollowing.filter(id => theirFollowing.includes(id)).length;
+
+      return mutualCount;
+    } catch (error) {
+      console.error('Error getting mutual connections:', error);
+      return 0;
+    }
+  }, [currentUser, followedUsers]);
+
+  /**
+   * Check if two users mutually follow each other
+   */
+  const isMutualFollow = useCallback((userId) => {
+    // You follow them
+    const youFollowThem = followedUsers.includes(userId);
+
+    // They follow you (we'd need to check if userId is in your followers)
+    // For now, we'll just return if you follow them
+    // This can be enhanced with a followers list
+    return youFollowThem;
+  }, [followedUsers]);
+
+  /**
+   * Clear new followers badge count
+   */
+  const clearNewFollowersBadge = useCallback(() => {
+    setNewFollowersCount(0);
   }, []);
 
   const addReaction = useCallback((chatId, messageId, emoji) => {
@@ -791,34 +1270,84 @@ export const AppProvider = ({ children }) => {
     }));
   }, []);
 
-  const toggleChatLock = useCallback((chatId) => {
+  const toggleChatLock = useCallback(async (chatId) => {
+  // 1. Optimistic Update
     setChats(prev => prev.map(c => {
       if (c.id === chatId) {
         const newLocked = !c.isLocked;
         return {
           ...c,
-          isLocked: newLocked,
-          isArchived: newLocked ? true : c.isArchived
+          isLocked: newLocked
         };
       }
       return c;
     }));
-  }, []);
 
-  const toggleDateLock = useCallback((chatId, dateString) => {
+    // 2. Persist to Firestore
+    try {
+      const chat = chats.find(c => c.id === chatId);
+      if (chat) {
+        const newLocked = !chat.isLocked;
+        await chatFirebaseService.updateUserChatSettings(chatId, currentUser.id, {
+          isLocked: newLocked
+        });
+        console.log(`✅ Chat ${newLocked ? 'locked' : 'unlocked'} successfully`);
+      }
+    } catch (error) {
+      console.error('Failed to persist lock status:', error);
+      // Optionally revert state here
+    }
+  }, [chats, currentUser]);
+
+  const toggleDateLock = useCallback(async (chatId, dateString) => {
+  // 1. Optimistic Update
     setChats(prev => prev.map(c => {
       if (c.id !== chatId) return c;
-      const currentHidden = c.hiddenDates || [];
+
+      const userSettings = c.userSettings || {};
+      const currentHidden = userSettings.hiddenDates || [];
       const isHidden = currentHidden.includes(dateString);
+
       let newHidden;
       if (isHidden) {
         newHidden = currentHidden.filter(d => d !== dateString);
       } else {
         newHidden = [...currentHidden, dateString];
       }
-      return { ...c, hiddenDates: newHidden };
+
+      return {
+        ...c,
+        userSettings: {
+          ...userSettings,
+          hiddenDates: newHidden
+        }
+      };
     }));
-  }, []);
+
+    // 2. Persist to Firestore
+    try {
+      const chat = chats.find(c => c.id === chatId);
+      if (chat) {
+        const userSettings = chat.userSettings || {};
+        const currentHidden = userSettings.hiddenDates || [];
+        const isHidden = currentHidden.includes(dateString);
+
+        let newHidden;
+        if (isHidden) {
+          newHidden = currentHidden.filter(d => d !== dateString);
+        } else {
+          newHidden = [...currentHidden, dateString];
+        }
+
+        await chatFirebaseService.updateUserChatSettings(chatId, currentUser.id, {
+          hiddenDates: newHidden
+        });
+      }
+    } catch (error) {
+      console.error('Failed to persist date lock:', error);
+      // Optionally revert state here
+    }
+  }, [chats, currentUser]);
 
   const addStatusUpdate = useCallback((status) => {
     setStatusUpdates(prev => [status, ...prev]);
@@ -1127,7 +1656,7 @@ export const AppProvider = ({ children }) => {
     channels,
     chatDocuments,
     currentUser,
-    currentUserId: data?.currentUserId || 'me',
+    currentUserId: currentUser?.id || 'me',
     drafts,
     chatSettings,
     securitySettings,
@@ -1185,6 +1714,8 @@ export const AppProvider = ({ children }) => {
     hiddenMessages,
     toggleArchiveChat,
     togglePinChat,
+    toggleChatLock,
+    toggleDateLock,
     setSearchQuery,
     setLogoEffect: (effect) => updateAppSettings({ logoEffect: effect }),
     setLanguage: (lang) => updateAppSettings({ language: lang }),
@@ -1195,7 +1726,30 @@ export const AppProvider = ({ children }) => {
     updateMessageStatus,
     markChatAsRead,
     togglePinMessage,
-    toggleStarMessage
+    toggleStarMessage,
+    // Follow functions
+    followUser,
+    unfollowUser,
+    isFollowing,
+    acceptRequest: async (requesterId) => {
+      const result = await followFirebaseService.acceptFollowRequest(requesterId, currentUser.id);
+      if (result.success) {
+        setPendingRequests(prev => prev.filter(r => r.followerId !== requesterId));
+        setFollowersCount(prev => prev + 1);
+      }
+      return result;
+    },
+    rejectRequest: async (requesterId) => {
+      const result = await followFirebaseService.rejectFollowRequest(requesterId, currentUser.id);
+      if (result.success) {
+        setPendingRequests(prev => prev.filter(r => r.followerId !== requesterId));
+      }
+      return result;
+    },
+
+    followedUsers,
+    outgoingRequests,
+    pendingRequests
   }), [
     chats, messages, users, calls, statusUpdates, channels, chatDocuments,
     currentUser, data?.currentUserId, drafts, chatSettings,
@@ -1212,7 +1766,16 @@ export const AppProvider = ({ children }) => {
     endGame, closeGame, minimizeGame, maximizeGame, editMessage, markMessageAsViewed,
     onlineUsers, typingUsers, lastSeen, markUserOnline, markUserOffline,
     setUserTyping, updateMessageStatus, markChatAsRead, togglePinMessage, toggleStarMessage,
+    followUser, unfollowUser, isFollowing, followedUsers,
+    followersCount,
+    followingCount,
+    newFollowersCount,
+    clearNewFollowersBadge,
+    getMutualConnectionsCount,
+    isMutualFollow,
     addReaction, updateChatTheme, toggleChatLock,
+    followedUsers, followersCount, followingCount, newFollowersCount,
+    outgoingRequests, pendingRequests, // Added to dependency array
     // Notification state and functions
     notificationPermission, fcmToken, requestNotificationPermission, showNotification, notificationsEnabled,
     // Session management

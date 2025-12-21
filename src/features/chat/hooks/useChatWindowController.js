@@ -267,6 +267,7 @@ export const useChatWindowController = () => {
         if (lockPin === correctPin) {
             if (chatId && dateLockTarget) toggleDateLock(chatId, dateLockTarget);
             setDateLockTarget(null);
+            setLockPin(''); // Clear PIN on successful unlock
         } else {
             setLockError('Incorrect PIN');
             setLockPin('');

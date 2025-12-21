@@ -1194,7 +1194,7 @@ const SettingsTab = () => {
                 />
 
                 <SettingItem
-                    onClick={() => setShowPrivacySettings(true)}
+                    onClick={() => navigate('/privacy')}
                     icon={<UserIcon size={24} />}
                     label="Privacy"
                     sub="Block contacts, disappearing messages"

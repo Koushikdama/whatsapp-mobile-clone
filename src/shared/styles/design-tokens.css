@@ -1,0 +1,159 @@
+/**
+ * Design Tokens - Centralized Design System
+ * Define all design constants as CSS custom properties
+ * This ensures consistency across the application and makes theming easier
+ */
+
+:root {
+  /* ===== Color Palette ===== */
+  
+  /* Primary Colors (WhatsApp Green) */
+  --wa-teal: #008069;
+  --wa-teal-dark: #005c4b;
+  --wa-teal-light: #00a884;
+  --wa-teal-lighter: #d1f4e0;
+  
+  /* Grays */
+  --wa-gray-50: #f0f2f5;
+  --wa-gray-100: #e9edef;
+  --wa-gray-200: #d1d7db;
+  --wa-gray-300: #b1b3b5;
+  --wa-gray-400: #8696a0;
+  --wa-gray-500: #667781;
+  --wa-gray-600: #54656f;
+  --wa-gray-700: #3b4a54;
+  --wa-gray-800: #202c33;
+  --wa-gray-900: #111b21;
+  
+  /* Semantic Colors */
+  --wa-blue: #53bdeb;
+  --wa-green: #00a884;
+  --wa-light-green: #25d366;
+  --wa-red: #ea4335;
+  --wa-orange: #f59e0b;
+  --wa-yellow: #fbbf24;
+  
+  /* Message Bubbles */
+  --wa-bubble-out: #d9fdd3;
+  --wa-bubble-in: #ffffff;
+  --wa-bubble-out-dark: #005c4b;
+  --wa-bubble-in-dark: #202c33;
+  
+  /* Backgrounds */
+  --wa-bg-light: #ffffff;
+  --wa-bg-gray: #f0f2f5;
+  --wa-bg-chat: #efeae2;
+  --wa-bg-dark: #111b21;
+  --wa-bg-dark-paper: #202c33;
+  --wa-bg-dark-header: #202c33;
+  --wa-bg-dark-hover: #2a3942;
+  
+  /* ===== Spacing Scale ===== */
+  --spacing-0: 0;
+  --spacing-1: 0.25rem;   /* 4px */
+  --spacing-2: 0.5rem;    /* 8px */
+  --spacing-3: 0.75rem;   /* 12px */
+  --spacing-4: 1rem;      /* 16px */
+  --spacing-5: 1.25rem;   /* 20px */
+  --spacing-6: 1.5rem;    /* 24px */
+  --spacing-8: 2rem;      /* 32px */
+  --spacing-10: 2.5rem;   /* 40px */
+  --spacing-12: 3rem;     /* 48px */
+  --spacing-16: 4rem;     /* 64px */
+  
+  /* ===== Typography ===== */
+  
+  /* Font Families */
+  --font-primary: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Helvetica', 'Arial', sans-serif;
+  --font-mono: 'SF Mono', 'Monaco', 'Inconsolata', 'Fira Code', 'Consolas', monospace;
+  
+  /* Font Sizes */
+  --text-xs: 0.75rem;     /* 12px */
+  --text-sm: 0.875rem;    /* 14px */
+  --text-base: 1rem;      /* 16px */
+  --text-lg: 1.125rem;    /* 18px */
+  --text-xl: 1.25rem;     /* 20px */
+  --text-2xl: 1.5rem;     /* 24px */
+  --text-3xl: 1.875rem;   /* 30px */
+  --text-4xl: 2.25rem;    /* 36px */
+  
+  /* Font Weights */
+  --font-normal: 400;
+  --font-medium: 500;
+  --font-semibold: 600;
+  --font-bold: 700;
+  
+  /* Line Heights */
+  --leading-tight: 1.25;
+  --leading-normal: 1.5;
+  --leading-relaxed: 1.75;
+  
+  /* ===== Borders ===== */
+  --border-width: 1px;
+  --border-width-2: 2px;
+  --border-width-4: 4px;
+  
+  --border-color-light: #e9edef;
+  --border-color-dark: #2a3942;
+  
+  /* Border Radius */
+  --radius-sm: 0.25rem;   /* 4px */
+  --radius-md: 0.375rem;  /* 6px */
+  --radius-lg: 0.5rem;    /* 8px */
+  --radius-xl: 0.75rem;   /* 12px */
+  --radius-2xl: 1rem;     /* 16px */
+  --radius-full: 9999px;
+  
+  /* ===== Shadows ===== */
+  --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
+  --shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.1), 0 1px 2px 0 rgba(0, 0, 0, 0.06);
+  --shadow-md: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  --shadow-lg: 0 10px 15px -3px rgba(0, 0, 0, 0.1), 0 4px 6px -2px rgba(0, 0, 0, 0.05);
+  --shadow-xl: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
+  --shadow-2xl: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+  
+  /* ===== Z-Index Scale ===== */
+  --z-base: 0;
+  --z-dropdown: 10;
+  --z-sticky: 20;
+  --z-fixed: 30;
+  --z-modal-backdrop: 40;
+  --z-modal: 50;
+  --z-popover: 60;
+  --z-tooltip: 70;
+  
+  /* ===== Transitions ===== */
+  --transition-fast: 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-base: 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slow: 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  --transition-slower: 500ms cubic-bezier(0.4, 0, 0.2, 1);
+  
+  /* ===== Component-Specific ===== */
+  
+  /* Avatar Sizes */
+  --avatar-sm: 32px;
+  --avatar-md: 40px;
+  --avatar-lg: 48px;
+  --avatar-xl: 56px;
+  --avatar-2xl: 64px;
+  
+  /* Button Sizes */
+  --button-height-sm: 32px;
+  --button-height-md: 40px;
+  --button-height-lg: 48px;
+  
+  /* Input Sizes */
+  --input-height-sm: 32px;
+  --input-height-md: 40px;
+  --input-height-lg: 48px;
+}
+
+/* Dark Theme */
+.dark {
+  --wa-bubble-out: var(--wa-bubble-out-dark);
+  --wa-bubble-in: var(--wa-bubble-in-dark);
+  --wa-bg-light: var(--wa-bg-dark);
+  --wa-bg-gray: var(--wa-bg-dark-paper);
+  --wa-bg-chat: var(--wa-gray-900);
+  --border-color-light: var(--border-color-dark);
+}

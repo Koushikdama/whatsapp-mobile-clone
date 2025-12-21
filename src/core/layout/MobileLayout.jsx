@@ -13,6 +13,9 @@ const SettingsTab = lazy(() => import('../../features/settings/components/Settin
 const NewChat = lazy(() => import('../../features/chat/components/NewChat'));
 const GroupInfo = lazy(() => import('../../features/chat/components/GroupInfo'));
 const ArchivedChats = lazy(() => import('../../features/chat/components/ArchivedChats'));
+const UserProfile = lazy(() => import('../../features/users/components/UserProfile'));
+const PrivacySettings = lazy(() => import('../../features/settings/components/PrivacySettings'));
+const FollowRequests = lazy(() => import('../../features/users/components/FollowRequests'));
 
 import { useApp } from '../../shared/context/AppContext';
 import { useOnlineStatus } from '../../shared/hooks/useOnlineStatus';
@@ -30,7 +33,7 @@ const LoadingFallback = () => (
 const MobileLayout = () => {
     const location = useLocation();
     const navigate = useNavigate();
-    const { searchQuery, setSearchQuery, currentUser, logoEffect, chats } = useApp();
+    const { searchQuery, setSearchQuery, currentUser, logoEffect, chats, pendingRequests } = useApp();
     const [showSearch, setShowSearch] = useState(false);
     const { isMobileSmall } = useResponsive(); // Get responsive info
 
@@ -48,7 +51,10 @@ const MobileLayout = () => {
     const isSubPage = location.pathname === '/new-chat' || 
                       location.pathname === '/archived' || 
                       location.pathname === '/status/privacy' ||
-                      location.pathname.includes('/starred');
+        location.pathname.includes('/profile/') ||
+        location.pathname.includes('/starred') ||
+        location.pathname === '/privacy' ||
+        location.pathname === '/follow-requests';
 
     useEffect(() => {
         // Reset search when changing tabs, but keep it if toggling search UI
@@ -83,6 +89,9 @@ const MobileLayout = () => {
                         <Route path="/new-chat" element={<NewChat />} />
                         <Route path="/archived" element={<ArchivedChats />} />
                         <Route path="/status/privacy" element={<StatusPrivacySettings />} />
+                        <Route path="/profile/:userId" element={<UserProfile />} />
+                        <Route path="/privacy" element={<PrivacySettings />} />
+                        <Route path="/follow-requests" element={<FollowRequests />} />
                     </Routes>
                 </Suspense>
                 <CallOverlay />
@@ -215,7 +224,16 @@ const MobileLayout = () => {
                     onClick={() => navigate('/settings')}
                     style={{ minWidth: '60px', minHeight: '50px', padding: '4px 8px' }}
                 >
-                    <Settings size={24} />
+                    <div className="relative">
+                        <Settings size={24} />
+                        {pendingRequests?.length > 0 && (
+                            <div className="absolute -top-1 -right-1 min-w-[16px] h-[16px] bg-red-500 rounded-full flex items-center justify-center px-1 border-2 border-white dark:border-wa-dark-header">
+                                <span className="text-white text-[9px] font-bold">
+                                    {pendingRequests.length > 99 ? '99+' : pendingRequests.length}
+                                </span>
+                            </div>
+                        )}
+                    </div>
                     <span className="text-[10px]">Settings</span>
                 </div>
             </div>

@@ -17,98 +17,72 @@ service cloud.firestore {
     
     // Users collection
     match /users/{userId} {
-      // Anyone can read user profiles (for chat participant info)
+      // Anyone can read user profiles
       allow read: if isAuthenticated();
       
-      // Users can only create/update their own profile
+      // Users can create their own profile
       allow create: if isOwner(userId);
-      allow update: if isOwner(userId);
       
-      // Users cannot delete their own profile (use Firebase Auth for that)
+      // Update: Allow owner changes OR follow-related updates (followers/following counts)
+      allow update: if isAuthenticated() && (
+        isOwner(userId) || 
+        request.resource.data.diff(resource.data).affectedKeys().hasOnly(['followers', 'followersCount', 'following', 'followingCount'])
+      );
+      
       allow delete: if false;
     }
     
     // Chats collection
     match /chats/{chatId} {
-      // Can read if you're a participant
-      allow read: if isAuthenticated() && 
-                     isParticipant(resource.data.participants);
+      allow read: if isAuthenticated() && isParticipant(resource.data.participants);
+      allow create: if isAuthenticated() && isParticipant(request.resource.data.participants);
+      allow update: if isAuthenticated() && isParticipant(resource.data.participants);
+      allow delete: if isAuthenticated() && (resource.data.createdBy == request.auth.uid || resource.data.groupRoles[request.auth.uid] == 'owner');
       
-      // Can create if you're in the participants list
-      allow create: if isAuthenticated() && 
-                       isParticipant(request.resource.data.participants);
-      
-      // Can update if you're a participant
-      allow update: if isAuthenticated() && 
-                       isParticipant(resource.data.participants);
-      
-      // Can delete if you're the creator or owner
-      allow delete: if isAuthenticated() && 
-                       (resource.data.createdBy == request.auth.uid ||
-                        resource.data.groupRoles[request.auth.uid] == 'owner');
-      
-      // User-specific chat settings subcollection
       match /userSettings/{userId} {
-        allow read: if isOwner(userId);
-        allow write: if isOwner(userId);
+        allow read, write: if isOwner(userId);
       }
+    }
+
+    // Messages Collection (NEW)
+    match /messages/{messageId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.senderId == request.auth.uid;
+      allow update: if isAuthenticated();
+      allow delete: if isAuthenticated() && resource.data.senderId == request.auth.uid;
     }
     
     // Calls collection
     match /calls/{callId} {
-      // Can read own calls
-      allow read: if isAuthenticated() && 
-                     resource.data.userId == request.auth.uid;
-      
-      // Can create own calls
-      allow create: if isAuthenticated() && 
-                       request.resource.data.userId == request.auth.uid;
-      
-      // Can update own calls
-      allow update: if isAuthenticated() && 
-                       resource.data.userId == request.auth.uid;
-      
-      // Can delete own calls
-      allow delete: if isAuthenticated() && 
-                       resource.data.userId == request.auth.uid;
+      allow read, write: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
     }
     
     // Status updates collection
     match /statusUpdates/{statusId} {
-      // Can read if not expired and privacy allows
-      // Simplified: anyone authenticated can read
       allow read: if isAuthenticated();
-      
-      // Can create own status
-      allow create: if isAuthenticated() && 
-                       request.resource.data.userId == request.auth.uid;
-      
-      // Can update own status
-      allow update: if isAuthenticated() && 
-                       resource.data.userId == request.auth.uid;
-      
-      // Can delete own status
-      allow delete: if isAuthenticated() && 
-                       resource.data.userId == request.auth.uid;
+      allow write: if isAuthenticated() && resource.data.userId == request.auth.uid;
+      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid;
     }
     
     // Channels collection
     match /channels/{channelId} {
-      // Anyone can read channels
       allow read: if isAuthenticated();
-      
-      // Only channel creators can write
-      allow write: if isAuthenticated() && 
-                      resource.data.createdBy == request.auth.uid;
+      allow write: if isAuthenticated() && resource.data.createdBy == request.auth.uid;
     }
     
     // Game configs collection
     match /gameConfigs/{configId} {
-      // Anyone can read game configs
       allow read: if isAuthenticated();
-      
-      // Only admins can write (restrict in app logic)
       allow write: if false;
+    }
+    
+    // Follow relationships collection
+    match /followRelationships/{relationshipId} {
+      allow read: if isAuthenticated();
+      allow create: if isAuthenticated() && request.resource.data.followerId == request.auth.uid;
+      allow delete: if isAuthenticated() && resource.data.followerId == request.auth.uid;
+      allow update: if isAuthenticated(); // Allow accepting/rejecting requests
     }
   }
 }

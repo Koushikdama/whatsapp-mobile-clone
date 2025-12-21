@@ -59,6 +59,7 @@ class AuthService {
                 createdAt: serverTimestamp(),
                 lastSeen: serverTimestamp(),
                 isOnline: true,
+                isPrivate: false,
                 blockedUsers: []
             });
 

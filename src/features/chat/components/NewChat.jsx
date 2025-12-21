@@ -1,15 +1,15 @@
-
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowLeft, Search, Users, Camera, ArrowRight, Check, X } from 'lucide-react';
 import { useApp } from '../../../shared/context/AppContext';
+import followFirebaseService from '../../../services/firebase/FollowFirebaseService';
 
 
 const NewChat = () => {
     const navigate = useNavigate();
-    const { startChat, createGroup, chats, users, currentUserId } = useApp();
-    const [searchTerm, setSearchTerm] = useState('');
+    const { startChat, createGroup, chats, users, currentUserId, isFollowing } = useApp();
     const [activeTab, setActiveTab] = useState('following');
+    const [searchQuery, setSearchQuery] = useState('');
 
     // Group Creation State
     const [isCreatingGroup, setIsCreatingGroup] = useState(false);
@@ -18,18 +18,44 @@ const NewChat = () => {
     const [groupName, setGroupName] = useState('');
     const [groupCreationFilter, setGroupCreationFilter] = useState('all');
 
+    // State for followers
+    const [followerUsers, setFollowerUsers] = useState([]);
+
+    // Load followers from Firebase
+    useEffect(() => {
+        if (!currentUserId) return;
+
+        const loadFollowers = async () => {
+            try {
+                const result = await followFirebaseService.getFollowers(currentUserId);
+                if (result.success && result.followers) {
+                    // Get the follower user IDs
+                    const followerIds = result.followers.map(f => f.followerId);
+                    // Filter users to get follower user objects
+                    const followers = Object.values(users).filter(u => followerIds.includes(u.id));
+                    setFollowerUsers(followers);
+                }
+            } catch (error) {
+                console.error('Error loading followers:', error);
+            }
+        };
+
+        loadFollowers();
+    }, [currentUserId, users]);
+
     const lockedContactIds = new Set(
         chats.filter(c => c.isLocked).map(c => c.contactId)
     );
 
     const allContacts = Object.values(users).filter(u => u.id !== currentUserId);
 
-    const followingContacts = allContacts.filter(u => u.connectionType === 'following');
-    const followerContacts = allContacts.filter(u => u.connectionType === 'follower');
+    // Use actual Firebase follow relationships instead of connectionType
+    const followingContacts = allContacts.filter(u => isFollowing(u.id));
+    const followerContacts = followerUsers; // Use loaded followers
     const groupChats = chats.filter(c => c.isGroup);
 
-    const handleContactClick = (contactId) => {
-        const chatId = startChat(contactId);
+    const handleContactClick = async (contactId) => {
+        const chatId = await startChat(contactId);
         navigate(`/chat/${chatId}`);
     };
 
@@ -90,7 +116,7 @@ const NewChat = () => {
     if (isCreatingGroup) {
         const availableContacts = groupCreationFilter === 'following' ? followingContacts : allContacts;
         const filteredForSelection = availableContacts
-            .filter(u => u.name.toLowerCase().includes(searchTerm.toLowerCase()))
+            .filter(u => u.name.toLowerCase().includes(searchQuery.toLowerCase()))
             .filter(u => !lockedContactIds.has(u.id))
             .sort((a, b) => a.name.localeCompare(b.name));
 
@@ -125,8 +151,8 @@ const NewChat = () => {
                                     type="text"
                                     placeholder="Search..."
                                     className="bg-transparent outline-none text-sm w-full text-black dark:text-white placeholder:text-wa-gray dark:placeholder:text-gray-500"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
+                                    value={searchQuery}
+                                    onChange={(e) => setSearchQuery(e.target.value)}
                                 />
                             </div>
                         </div>
@@ -277,8 +303,8 @@ const NewChat = () => {
                         type="text"
                         placeholder={activeTab === 'groups' ? "Search groups" : "Search contacts"}
                         className="bg-transparent outline-none text-sm w-full text-black dark:text-white placeholder:text-wa-gray dark:placeholder:text-gray-500"
-                        value={searchTerm}
-                        onChange={(e) => setSearchTerm(e.target.value)}
+                        value={searchQuery}
+                        onChange={(e) => setSearchQuery(e.target.value)}
                     />
                 </div>
             </div>
@@ -299,7 +325,7 @@ const NewChat = () => {
                         </div>
 
                         {followingContacts
-                            .filter(u => u.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                            .filter(u => u.name.toLowerCase().includes(searchQuery.toLowerCase()))
                             .map(user => (
                                 <div key={user.id} onClick={() => handleContactClick(user.id)} className="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-wa-grayBg dark:hover:bg-wa-dark-hover transition-colors">
                                     <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full object-cover" />
@@ -319,7 +345,7 @@ const NewChat = () => {
                             Followers ({followerContacts.length})
                         </div>
                         {followerContacts
-                            .filter(u => u.name.toLowerCase().includes(searchTerm.toLowerCase()))
+                            .filter(u => u.name.toLowerCase().includes(searchQuery.toLowerCase()))
                             .map(user => (
                                 <div key={user.id} onClick={() => handleContactClick(user.id)} className="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-wa-grayBg dark:hover:bg-wa-dark-hover transition-colors">
                                     <img src={user.avatar} alt={user.name} className="w-10 h-10 rounded-full object-cover" />
@@ -348,7 +374,7 @@ const NewChat = () => {
                         </div>
 
                         {groupChats
-                            .filter(c => (c.groupName || '').toLowerCase().includes(searchTerm.toLowerCase()))
+                            .filter(c => (c.groupName || '').toLowerCase().includes(searchQuery.toLowerCase()))
                             .map(chat => (
                                 <div key={chat.id} onClick={() => handleGroupClick(chat.id)} className="flex items-center gap-4 px-4 py-3 cursor-pointer hover:bg-wa-grayBg dark:hover:bg-wa-dark-hover transition-colors">
                                     <div className="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center text-gray-500 dark:text-gray-300">
