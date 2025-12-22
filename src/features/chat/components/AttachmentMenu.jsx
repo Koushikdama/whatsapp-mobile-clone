@@ -1,5 +1,5 @@
 import React from 'react';
-import { FileText, Camera, Image as ImageIcon, Headphones, MapPin, BarChart2, PenTool, Gamepad2 } from 'lucide-react';
+import { FileText, Camera, Image as ImageIcon, Headphones, MapPin, BarChart2, PenTool, Gamepad2, Mic, Music } from 'lucide-react';
 
 const AttachmentIcon = ({ icon, color, label, onClick }) => (
     <div className="flex flex-col items-center gap-2 cursor-pointer transition-transform active:scale-95 hover:scale-105" onClick={onClick}>
@@ -10,7 +10,7 @@ const AttachmentIcon = ({ icon, color, label, onClick }) => (
     </div>
 );
 
-const AttachmentMenu = ({ onSelect, onClose }) => {
+const AttachmentMenu = ({ onSelect, onClose, isGroup = false }) => {
     return (
         <>
             <div className="absolute bottom-20 left-4 bg-white dark:bg-wa-dark-paper rounded-2xl p-6 shadow-[0_4px_20px_rgba(0,0,0,0.15)] dark:shadow-black/50 border border-gray-100 dark:border-gray-700 animate-in slide-in-from-bottom-5 fade-in zoom-in-95 duration-200 w-[90%] max-w-[350px] z-50">
@@ -63,6 +63,21 @@ const AttachmentMenu = ({ onSelect, onClose }) => {
                         label="Draw"
                         onClick={() => onSelect('draw')}
                     />
+                    <AttachmentIcon
+                        icon={<Music size={24} />}
+                        color="bg-blue-500"
+                        label="Music"
+                        onClick={() => onSelect('music')}
+                    />
+                    {/* Walkie-Talkie - Only show in group chats */}
+                    {isGroup && (
+                        <AttachmentIcon
+                            icon={<Mic size={24} />}
+                            color="bg-red-500"
+                            label="Walkie-Talkie"
+                            onClick={() => onSelect('walkie-talkie')}
+                        />
+                    )}
                 </div>
             </div>
             {/* Click outside listener to close menu */}

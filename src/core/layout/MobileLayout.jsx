@@ -15,6 +15,10 @@ const GroupInfo = lazy(() => import('../../features/chat/components/GroupInfo'))
 const ArchivedChats = lazy(() => import('../../features/chat/components/ArchivedChats'));
 const UserProfile = lazy(() => import('../../features/users/components/UserProfile'));
 const PrivacySettings = lazy(() => import('../../features/settings/components/PrivacySettings'));
+const LastSeenPrivacy = lazy(() => import('../../features/settings/components/privacy/LastSeenPrivacy'));
+const ProfilePhotoPrivacy = lazy(() => import('../../features/settings/components/privacy/ProfilePhotoPrivacy'));
+const AboutPrivacy = lazy(() => import('../../features/settings/components/privacy/AboutPrivacy'));
+const GroupsPrivacy = lazy(() => import('../../features/settings/components/privacy/GroupsPrivacy'));
 const FollowRequests = lazy(() => import('../../features/users/components/FollowRequests'));
 const BlockedUsersList = lazy(() => import('../../features/settings/components/BlockedUsersList'));
 const NotificationsPage = lazy(() => import('../../features/notifications/components/NotificationsPage'));
@@ -28,6 +32,7 @@ import useResponsive from '../../shared/hooks/useResponsive';
 import GlobalGameUI from '../../features/games/components/GlobalGameUI';
 import CallOverlay from '../../features/call/components/CallOverlay';
 import NotificationBell from '../../shared/components/NotificationBell';
+import OfflineBanner from '../../shared/components/ui/OfflineBanner';
 
 // Loading fallback component
 const LoadingFallback = () => (
@@ -100,6 +105,10 @@ const MobileLayout = () => {
                         <Route path="/status/privacy" element={<StatusPrivacySettings />} />
                         <Route path="/profile/:userId" element={<UserProfile />} />
                         <Route path="/privacy" element={<PrivacySettings />} />
+                        <Route path="/privacy/last-seen" element={<LastSeenPrivacy />} />
+                        <Route path="/privacy/profile-photo" element={<ProfilePhotoPrivacy />} />
+                        <Route path="/privacy/about" element={<AboutPrivacy />} />
+                        <Route path="/privacy/groups" element={<GroupsPrivacy />} />
                         <Route path="/follow-requests" element={<FollowRequests />} />
                         <Route path="/settings/blocked-users" element={<BlockedUsersList />} />
                         <Route path="/notifications" element={<NotificationsPage />} />
@@ -115,9 +124,15 @@ const MobileLayout = () => {
 
     return (
         <div className="h-screen w-full flex flex-col bg-white dark:bg-wa-dark-bg transition-colors">
+            {/* Offline Banner */}
+            <OfflineBanner />
+
             {/* Top Bar - Only show on main tabs (chats, calls), not on updates/status */}
             {(!location.pathname.includes('updates') && !location.pathname.includes('status') && !location.pathname.includes('settings')) && (
-                <div className={`${isMobileSmall ? 'h-[56px]' : 'h-[60px]'} bg-wa-teal dark:bg-wa-dark-header text-white dark:text-gray-200 flex items-center justify-between px-4 shadow-sm z-20 transition-colors shrink-0`} style={{ minHeight: '56px' }}>
+                <div
+                    className={`${isMobileSmall ? 'h-[56px]' : 'h-[60px]'} bg-wa-teal dark:bg-wa-dark-header text-white dark:text-gray-200 flex items-center justify-between px-4 shadow-sm z-20 transition-colors shrink-0`}
+                    style={{ minHeight: '56px' }}
+                >
                     {showSearch ? (
                         <div className="flex items-center w-full gap-3 animate-in fade-in slide-in-from-right-4 duration-200">
                             <ArrowLeft size={24} onClick={() => { setShowSearch(false); setSearchQuery(''); }} className="cursor-pointer" />
@@ -164,24 +179,28 @@ const MobileLayout = () => {
 
                 {/* Chats FAB - Responsive sizing with minimum 44px touch target */}
                 {(location.pathname === '/' || location.pathname === '/chats') && (
-                    <div
+                    <button
                         onClick={() => navigate('/new-chat')}
                         className={`absolute ${isMobileSmall ? 'bottom-5 right-4' : 'bottom-6 right-5'} bg-wa-teal dark:bg-wa-tealDark rounded-full shadow-[0_4px_10px_rgba(0,0,0,0.3)] flex items-center justify-center text-white cursor-pointer active:brightness-90 transition-all z-20 hover:scale-105`}
-                        style={{ 
+                        style={{
                             width: isMobileSmall ? '56px' : '60px',
                             height: isMobileSmall ? '56px' : '60px',
                             minWidth: '44px',
                             minHeight: '44px'
                         }}
+                        aria-label="New chat"
                     >
                         <MessageCircle className="fill-white" size={isMobileSmall ? 22 : 24} />
                         <div 
-                            className={`absolute -top-1 -right-1 bg-wa-teal dark:bg-wa-tealDark rounded-full border-2 border-white dark:border-wa-dark-bg flex items-center justify-center`}
-                            style={{ width: isMobileSmall ? '18px' : '20px', height: isMobileSmall ? '18px' : '20px' }}
+                            className="absolute -top-1 -right-1 bg-wa-teal dark:bg-wa-tealDark rounded-full border-2 border-white dark:border-wa-dark-bg flex items-center justify-center"
+                            style={{
+                                width: isMobileSmall ? '18px' : '20px',
+                                height: isMobileSmall ? '18px' : '20px'
+                            }}
                         >
                             <Plus size={isMobileSmall ? 10 : 12} strokeWidth={3} />
                         </div>
-                    </div>
+                    </button>
                 )}
 
                 {/* Calls FAB - Centered at bottom with minimum 44px touch target */}
@@ -194,6 +213,7 @@ const MobileLayout = () => {
                             minWidth: '44px',
                             minHeight: '44px'
                         }}
+                        onClick={() => navigate('/calls')}
                     >
                         <Phone className="fill-white" size={isMobileSmall ? 22 : 24} />
                         <Plus size={isMobileSmall ? 12 : 14} strokeWidth={3} className="absolute top-2 right-2 text-white" />

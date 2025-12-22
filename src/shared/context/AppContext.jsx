@@ -1,15 +1,16 @@
 import React, { createContext, useContext, useState, useEffect, useMemo, useCallback } from 'react';
-import { useChatData } from '../../features/chat/hooks/useChatData';
 import { generateGameId, generateRoomId } from '../utils/gameUtils';
 import { webSocketService, GameEventTypes } from '../../services/WebSocketService';
 import { useLocalStorage, useSessionStorage } from '../hooks/useStorage';
 import { useNotifications } from '../hooks/useNotifications';
+import offlineMessageService from '../../services/OfflineMessageService';
 import authService from '../../services/firebase/AuthService';
 import settingsService from '../../services/firebase/SettingsService';
 import chatFirebaseService from '../../services/firebase/ChatFirebaseService';
 import { messageFirebaseService } from '../../services/firebase/MessageFirebaseService';
 import followFirebaseService from '../../services/firebase/FollowFirebaseService';
 import userService from '../../services/firebase/UserService';
+import { DEFAULT_PRIVACY_SETTINGS } from '../constants/privacyLevels';
 
 const AppContext = createContext(undefined);
 
@@ -31,7 +32,7 @@ const DEFAULT_SECURITY_SETTINGS = {
 };
 
 export const AppProvider = ({ children }) => {
-  const { data, loading: dataLoading } = useChatData();
+  // All data now loaded from Firebase only - no static data.json
 
   // Auth State - Firebase as source of truth
   const [isAuthenticated, setIsAuthenticated] = useState(false);
@@ -48,6 +49,9 @@ export const AppProvider = ({ children }) => {
 
   const [chatSettings, setChatSettings] = useLocalStorage('chatSettings', DEFAULT_CHAT_SETTINGS);
   const [securitySettings, setSecuritySettings] = useLocalStorage('securitySettings', DEFAULT_SECURITY_SETTINGS);
+  const [privacySettings, setPrivacySettings] = useLocalStorage('privacySettings', DEFAULT_PRIVACY_SETTINGS);
+
+  // Status Privacy (kept separate for backward compatibility)
   const [statusPrivacy, setStatusPrivacy] = useLocalStorage('statusPrivacy', 'contacts');
   
   // Notification state
@@ -97,6 +101,9 @@ export const AppProvider = ({ children }) => {
 
   // Hidden messages for "Delete for Me" functionality
   const [hiddenMessages, setHiddenMessages] = useLocalStorage('hiddenMessages', {});
+
+  // Offline messaging state
+  const [isOnline, setIsOnline] = useState(navigator.onLine);
 
   // Follow functionality - Instagram-style (synced with Firebase)
   const [followedUsers, setFollowedUsers] = useState([]);
@@ -364,12 +371,9 @@ export const AppProvider = ({ children }) => {
               }
             }));
 
-            // Merge with existing chats from data.json (keep both)
-            setChats(prev => {
-              const existingIds = new Set(prev.map(c => c.id));
-              const newFirebaseChats = transformedChats.filter(c => !existingIds.has(c.id));
-              return [...transformedChats, ...prev.filter(c => !transformedChats.some(fc => fc.id === c.id))];
-            });
+            // Set Firebase chats as the only source of truth
+            setChats(transformedChats);
+            console.log(`✅ Set ${transformedChats.length} chats from Firebase`);
           } else {
             console.log('⚠️ No chats found in Firebase');
           }
@@ -479,63 +483,9 @@ export const AppProvider = ({ children }) => {
     });
   }, [chats, currentUser]);
 
-  // Initialize data when fetched
-  useEffect(() => {
-    if (data) {
-      // Current User
-      const savedUser = localStorage.getItem('currentUser');
-      if (savedUser) {
-        setCurrentUser(JSON.parse(savedUser));
-      } else {
-        // Fallback to data.json user if not in local storage
-        const userFromData = data.users[data.currentUserId];
-        if (userFromData) {
-          setCurrentUser(userFromData);
-        }
-      }
-
-      // Users (Static for now)
-      setUsers(data.users);
-
-      // Chats (LocalStorage or Data)
-      // Enrich existing groups with roles if missing
-      const enrichedChats = data.chats.map(c => {
-        if (c.isGroup && !c.groupRoles) {
-          const roles = {};
-          c.groupParticipants?.forEach((pid) => {
-            // Mock logic: 'me' is owner for c5 (created by me), 'u5' is admin everywhere else
-            if (c.id === 'c5' && pid === 'me') roles[pid] = 'owner';
-            else if (pid === 'u5') roles[pid] = 'admin';
-            else roles[pid] = 'member';
-          });
-
-          // Fallback: Make first participant owner if none exists
-          if (!Object.values(roles).includes('owner') && c.groupParticipants && c.groupParticipants.length > 0) {
-            roles[c.groupParticipants[0]] = 'owner';
-          }
-
-          return {
-            ...c,
-            groupRoles: roles,
-            groupSettings: {
-              editInfo: 'all',
-              sendMessages: 'all',
-              addMembers: 'all',
-              approveMembers: false
-            }
-          };
-        }
-        return c;
-      });
-
-      setChats(enrichedChats);
-      setMessages(data.messages);
-      setCalls(data.calls);
-      setStatusUpdates(data.statusUpdates);
-      setChannels(data.channels || []);
-      setChatDocuments(data.chatDocuments || {});
-    }
-  }, [data]);
+  // Note: All data initialization removed - using Firebase only
+  // Users, chats, messages, etc. are now loaded exclusively from Firebase
+  // via the Firebase auth state listener effect above
 
   // Sync Theme with CSS only (storage is handled by hook)
   useEffect(() => {
@@ -550,11 +500,48 @@ export const AppProvider = ({ children }) => {
   // Sync Chat Settings with CSS variables only (storage is handled by hook)
   useEffect(() => {
     const root = document.documentElement;
+
     root.style.setProperty('--wa-teal', chatSettings.appColor);
     root.style.setProperty('--wa-teal-dark', chatSettings.appColor);
     root.style.setProperty('--wa-bubble-out', chatSettings.outgoingBubbleColor);
     root.style.setProperty('--wa-bubble-in', chatSettings.incomingBubbleColor);
   }, [chatSettings]);
+
+  // Online/Offline Event Listeners and Offline Message Sync
+  useEffect(() => {
+    const handleOnline = () => {
+      console.log('🌐 [AppContext] Connection restored');
+      setIsOnline(true);
+      // Trigger automatic sync when back online
+      offlineMessageService.syncQueue(messageFirebaseService);
+    };
+
+    const handleOffline = () => {
+      console.log('📴 [AppContext] Connection lost');
+      setIsOnline(false);
+    };
+
+    window.addEventListener('online', handleOnline);
+    window.addEventListener('offline', handleOffline);
+
+    // Subscribe to offline service events for message status updates
+    const unsubscribe = offlineMessageService.subscribe((event) => {
+      if (event.type === 'messageSynced') {
+        // Update message status to sent/delivered after successful sync
+        updateMessageStatus(event.chatId, event.messageId, 'sent');
+        setTimeout(() => {
+          updateMessageStatus(event.chatId, event.messageId, 'delivered');
+        }, 1000);
+      }
+    });
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      window.removeEventListener('offline', handleOffline);
+      unsubscribe();
+    };
+  }, []); // updateMessageStatus is stable (useCallback), no need in deps
+
 
   const login = useCallback(() => {
     // Note: This is called from Login component after successful Firebase auth
@@ -606,6 +593,28 @@ export const AppProvider = ({ children }) => {
       }
     }
   }, [currentUser, chatSettings]);
+
+  // Update Privacy Settings
+  const updatePrivacySettings = useCallback(async (newSettings) => {
+    console.log('🔒 [AppContext] Updating privacy settings:', newSettings);
+    try {
+      // Update localStorage immediately
+      setPrivacySettings(prev => {
+        const updated = { ...prev, ...newSettings };
+        console.log('🔒 [AppContext] New privacy settings:', updated);
+        return updated;
+      });
+
+      // Sync to Firebase in background
+      if (currentUser?.id) {
+        const merged = { ...privacySettings, ...newSettings };
+        await settingsService.updatePrivacySettings(currentUser.id, merged);
+        console.log('✅ Privacy settings synced to Firebase');
+      }
+    } catch (error) {
+      console.error('❌ [AppContext] Error updating privacy settings:', error);
+    }
+  }, [currentUser?.id, privacySettings]);
 
   const updateSecuritySettings = useCallback(async (newSettings) => {
   // Update localStorage immediately for responsive UI
@@ -926,7 +935,7 @@ export const AppProvider = ({ children }) => {
       senderId: currentUser.id,
       text,
       timestamp: new Date().toISOString(),
-      status: 'sent',
+      status: isOnline ? 'sent' : 'queued', // Set to queued if offline
       type,
       replyToId,
       mediaUrl,
@@ -961,7 +970,23 @@ export const AppProvider = ({ children }) => {
       return newChats;
     });
 
-    // Save to Firebase
+    // Check if online
+    if (!isOnline) {
+      // Queue message for later sending
+      console.log('📴 [AppContext] User is offline, queueing message');
+      try {
+        const cleanMessage = Object.fromEntries(
+          Object.entries(newMessage).filter(([_, value]) => value !== undefined)
+        );
+        await offlineMessageService.queueMessage(chatId, cleanMessage);
+        console.log('📦 Message queued for later sending');
+      } catch (error) {
+        console.error('❌ Error queueing message:', error);
+      }
+      return; // Don't try to send to Firebase when offline
+    }
+
+    // Save to Firebase (only when online)
     try {
       // Clean message object - remove undefined properties
       const cleanMessage = Object.fromEntries(
@@ -972,15 +997,29 @@ export const AppProvider = ({ children }) => {
       console.log('✅ Message saved to Firebase');
     } catch (error) {
       console.error('❌ Error saving message to Firebase:', error);
-      // Message already shown optimistically, so we don't need to revert
+      // If send fails, queue it for retry
+      try {
+        const cleanMessage = Object.fromEntries(
+          Object.entries(newMessage).filter(([_, value]) => value !== undefined)
+        );
+        await offlineMessageService.queueMessage(chatId, cleanMessage);
+        console.log('📦 Message queued for retry due to error');
+
+        // Update message status to queued
+        updateMessageStatus(chatId, newMessage.id, 'queued');
+      } catch (queueError) {
+        console.error('❌ Error queueing message:', queueError);
+      }
     }
 
     // Simulate message delivery status progression
     // sent -> delivered (1 second) -> read (when chat is next opened)
-    setTimeout(() => {
-      updateMessageStatus(chatId, newMessage.id, 'delivered');
-    }, 1000);
-  }, [currentUser, updateMessageStatus]);
+    if (isOnline) {
+      setTimeout(() => {
+        updateMessageStatus(chatId, newMessage.id, 'delivered');
+      }, 1000);
+    }
+  }, [currentUser, isOnline, updateMessageStatus]);
 
   const votePoll = useCallback((chatId, messageId, optionIds) => {
     setMessages(prev => {
@@ -1678,7 +1717,7 @@ export const AppProvider = ({ children }) => {
   // Memoize context value - MUST be called before any conditional returns
   const contextValue = useMemo(() => ({
     isAuthenticated,
-    authLoading,
+    authLoading, // Only Firebase auth loading, no more static data loading
     firebaseUser,
     login,
     logout,
@@ -1694,12 +1733,16 @@ export const AppProvider = ({ children }) => {
     currentUserId: currentUser?.id || 'me',
     drafts,
     chatSettings,
+    updateChatSettings,
     securitySettings,
+    updateSecuritySettings,
+    privacySettings,
+    updatePrivacySettings,
     statusPrivacy,
     searchQuery,
     logoEffect,
-    appConfig: data?.appConfig,
-    gameConfig: data?.gameConfig,
+    // App and game configs are loaded from Firebase or environment\n    // appConfig and gameConfig removed - use Firebase settings instead
+
 
     // Online Status & Typing State
     onlineUsers,
@@ -1788,12 +1831,14 @@ export const AppProvider = ({ children }) => {
 
     followedUsers,
     outgoingRequests,
-    pendingRequests
+    pendingRequests,
+    // Offline messaging
+    isOnline
   }), [
     chats, messages, users, calls, statusUpdates, channels, chatDocuments,
-    currentUser, data?.currentUserId, drafts, chatSettings,
-    securitySettings, statusPrivacy, searchQuery, logoEffect, data?.appConfig,
-    data?.gameConfig, isAuthenticated, authLoading, firebaseUser, login, logout,
+    currentUser, drafts, chatSettings,
+    securitySettings, statusPrivacy, searchQuery, logoEffect,
+    isAuthenticated, authLoading, firebaseUser, login, logout,
     updateChatSettings, updateSecuritySettings, updateAppSettings,
     toggleTheme, updateUserProfile, setDraft, startChat, createGroup,
     addGroupParticipants, updateGroupSettings, updateGroupRole, addMessage,
@@ -1818,21 +1863,24 @@ export const AppProvider = ({ children }) => {
     // Notification state and functions
     notificationPermission, fcmToken, requestNotificationPermission, showNotification, notificationsEnabled,
     // Session management
-    activeSessionId, setActiveSessionId, messageSubscriptions
+    activeSessionId, setActiveSessionId, messageSubscriptions,
+    // Offline messaging  
+    isOnline
   ]);
 
 
-  // Early return AFTER all hooks - Show loading for auth or data
-  if (authLoading || dataLoading) {
+  // Early return AFTER all hooks - Show loading for auth only (no more static data)
+  if (authLoading) {
     return (
       <div className="flex flex-col items-center justify-center h-screen bg-[#EFEAE2] dark:bg-[#111b21] gap-4">
         <div className="w-12 h-12 border-4 border-wa-teal border-t-transparent rounded-full animate-spin"></div>
         <div className="text-wa-teal dark:text-gray-300 font-medium animate-pulse">
-          {authLoading ? 'Authenticating...' : 'Loading WhatsApp...'}
+          Authenticating...
         </div>
       </div>
-    )
+    );
   }
+
 
   return (
     <AppContext.Provider value={contextValue}>

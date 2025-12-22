@@ -34,6 +34,9 @@ import ThreadView from './threading/ThreadView';
 import { translateText } from '../../../services/TranslationService';
 import DeleteMessageModal from './DeleteMessageModal';
 import EmptyChatState from '../../../shared/components/chat/EmptyChatState';
+import WalkieTalkieModal from './WalkieTalkieModal';
+import MusicRequestModal from './MusicRequestModal';
+import FloatingMusicPlayer from '../../../shared/components/media/FloatingMusicPlayer';
 
 
 const REACTIONS_LIST = ["👍", "❤️", "😂", "😮", "😢", "🙏"];
@@ -73,6 +76,13 @@ const ChatWindow = () => {
 
     // Phase 2: Advanced Search
     const [selectedSearchResult, setSelectedSearchResult] = useState(null);
+
+    // Walkie-Talkie Modal State
+    const [showWalkieTalkieModal, setShowWalkieTalkieModal] = useState(false);
+
+    // Music Session State
+    const [showMusicRequestModal, setShowMusicRequestModal] = useState(false);
+    const [activeMusicSession, setActiveMusicSession] = useState(null);
 
 
 
@@ -209,6 +219,16 @@ const ChatWindow = () => {
         return `${mins}:${secs.toString().padStart(2, '0')}`;
     };
 
+    // Music session handlers
+    const handleMusicSessionCreated = (session) => {
+        setActiveMusicSession(session);
+        console.log('✅ Music session active:', session);
+    };
+
+    const handleCloseMusicPlayer = () => {
+        setActiveMusicSession(null);
+    };
+
     const handleAttachmentSelect = (type) => {
         if (!fileInputRef.current) return;
 
@@ -242,6 +262,18 @@ const ChatWindow = () => {
                 chatId: displayChat?.id,
                 opponentId: displayChat?.isGroup ? 'group' : displayChat?.contactId
             });
+            ctrl.setShowAttachMenu(false);
+            return;
+        } else if (type === 'walkie-talkie') {
+            // Only for group chats
+            if (displayChat?.isGroup) {
+                setShowWalkieTalkieModal(true);
+                ctrl.setShowAttachMenu(false);
+            }
+            return;
+        } else if (type === 'music') {
+            // Show music request modal
+            setShowMusicRequestModal(true);
             ctrl.setShowAttachMenu(false);
             return;
         } else {
@@ -613,6 +645,7 @@ const ChatWindow = () => {
                         <AttachmentMenu
                             onSelect={handleAttachmentSelect}
                             onClose={() => ctrl.setShowAttachMenu(false)}
+                                        isGroup={displayChat?.isGroup || false}
                         />
                     )}
 
@@ -666,6 +699,33 @@ const ChatWindow = () => {
                 <PollDetailsModal
                     pollData={viewingPoll}
                     onClose={() => setViewingPoll(null)}
+                />
+            )}
+
+            {/* Walkie-Talkie Modal - Only for group chats */}
+            {displayChat?.isGroup && (
+                <WalkieTalkieModal
+                    isOpen={showWalkieTalkieModal}
+                    onClose={() => setShowWalkieTalkieModal(false)}
+                    groupId={displayChat.id}
+                    groupName={displayChat.groupName}
+                    participants={displayChat.groupParticipants || []}
+                />
+            )}
+
+            {/* Music Request Modal */}
+            <MusicRequestModal
+                isOpen={showMusicRequestModal}
+                onClose={() => setShowMusicRequestModal(false)}
+                chatId={displayChat?.id}
+                onSessionCreated={handleMusicSessionCreated}
+            />
+
+            {/* Floating Music Player */}
+            {activeMusicSession && (
+                <FloatingMusicPlayer
+                    session={activeMusicSession}
+                    onClose={handleCloseMusicPlayer}
                 />
             )}
 

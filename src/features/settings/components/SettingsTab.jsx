@@ -446,7 +446,22 @@ const ChatSettingsScreen = ({ onClose }) => {
         e.target.value = '';
     };
 
-    const APP_COLORS = appConfig?.appColors || ['#008069'];
+    // Solid colors array
+    const APP_COLORS = [
+        '#008069', // Classic WhatsApp Teal
+        '#0088CC', // Ocean Blue
+        '#7B61FF', // Purple
+        '#E91E63', // Rose
+        '#2E7D32', // Forest Green
+        '#FF6F00', // Sunset Orange
+        '#1A237E', // Midnight Blue
+        '#EC407A', // Cherry
+        '#10B981', // Emerald
+        '#F59E0B', // Amber
+        '#FF5722', // Deep Orange
+        '#9C27B0'  // Deep Purple
+    ];
+
     const BUBBLE_COLORS = appConfig?.bubbleColors || ['#D9FDD3', '#FFFFFF'];
 
     return (
@@ -510,12 +525,15 @@ const ChatSettingsScreen = ({ onClose }) => {
                         <Palette size={20} className="text-wa-gray" />
                         <h3 className="text-base font-medium text-[#111b21] dark:text-gray-100">App Color</h3>
                     </div>
-                    <div className="flex gap-4 overflow-x-auto pb-2 no-scrollbar">
+                    <div className="flex gap-3 overflow-x-auto pb-2 no-scrollbar">
                         {APP_COLORS.map(color => (
                             <button
                                 key={color}
                                 onClick={() => updateChatSettings({ appColor: color })}
-                                className={`w-10 h-10 rounded-full shrink-0 border-2 transition-transform hover:scale-110 ${chatSettings.appColor === color ? 'border-black dark:border-white' : 'border-transparent'} `}
+                                className={`w-10 h-10 rounded-full shrink-0 border-2 transition-transform hover:scale-110 ${chatSettings.appColor === color
+                                        ? 'border-black dark:border-white scale-110'
+                                        : 'border-gray-300 dark:border-gray-600'
+                                    }`}
                                 style={{ backgroundColor: color }}
                             />
                         ))}

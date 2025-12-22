@@ -15,6 +15,10 @@ const GroupInfo = lazy(() => import('../../features/chat/components/GroupInfo'))
 const ArchivedChats = lazy(() => import('../../features/chat/components/ArchivedChats'));
 const UserProfile = lazy(() => import('../../features/users/components/UserProfile'));
 const PrivacySettings = lazy(() => import('../../features/settings/components/PrivacySettings'));
+const LastSeenPrivacy = lazy(() => import('../../features/settings/components/privacy/LastSeenPrivacy'));
+const ProfilePhotoPrivacy = lazy(() => import('../../features/settings/components/privacy/ProfilePhotoPrivacy'));
+const AboutPrivacy = lazy(() => import('../../features/settings/components/privacy/AboutPrivacy'));
+const GroupsPrivacy = lazy(() => import('../../features/settings/components/privacy/GroupsPrivacy'));
 const FollowRequests = lazy(() => import('../../features/users/components/FollowRequests'));
 const BlockedUsersList = lazy(() => import('../../features/settings/components/BlockedUsersList'));
 const NotificationsPage = lazy(() => import('../../features/notifications/components/NotificationsPage'));
@@ -166,6 +170,10 @@ const TabletLayout = () => {
                                 <Route path="/channels/:channelId" element={<ChatList />} />
                                 <Route path="/profile/:userId" element={<UserProfile />} />
                                 <Route path="/privacy" element={<PrivacySettings />} />
+                                <Route path="/privacy/last-seen" element={<LastSeenPrivacy />} />
+                                <Route path="/privacy/profile-photo" element={<ProfilePhotoPrivacy />} />
+                                <Route path="/privacy/about" element={<AboutPrivacy />} />
+                                <Route path="/privacy/groups" element={<GroupsPrivacy />} />
                                 <Route path="/follow-requests" element={<FollowRequests />} />
                                 <Route path="/settings/blocked-users" element={<BlockedUsersList />} />
                                 <Route path="/notifications" element={<NotificationsPage />} />

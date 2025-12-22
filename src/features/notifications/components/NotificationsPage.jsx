@@ -243,49 +243,69 @@ const NotificationsPage = () => {
     };
 
     return (
-        <div className="flex flex-col h-screen bg-white dark:bg-wa-dark-bg">
-            {/* Header */}
-            <div className="h-[60px] bg-wa-grayBg dark:bg-wa-dark-header flex items-center px-4 border-b border-wa-border dark:border-wa-dark-border shrink-0">
-                <button onClick={() => navigate(-1)} className="p-2 hover:bg-black/5 dark:hover:bg-white/10 rounded-full -ml-2">
-                    <ArrowLeft size={24} className="text-gray-700 dark:text-gray-300" />
+        <div className="flex flex-col pb-20 bg-white dark:bg-wa-dark-bg min-h-full">
+            {/* Desktop Header with Back Button - Only visible on md+ screens */}
+            <div className="hidden md:flex h-[60px] bg-wa-grayBg dark:bg-wa-dark-header items-center gap-3 px-4 shrink-0 border-b border-wa-border dark:border-wa-dark-border text-[#111b21] dark:text-gray-100 transition-colors sticky top-0 z-10">
+                <button onClick={() => navigate(-1)} className="p-2 -ml-2 rounded-full hover:bg-black/10 dark:hover:bg-white/10 transition-colors">
+                    <ArrowLeft size={24} />
                 </button>
-                <h1 className="text-xl font-semibold text-gray-900 dark:text-gray-100 ml-4">Notifications</h1>
+                <h2 className="text-xl font-medium md:text-lg">Notifications</h2>
                 {unreadCount > 0 && (
-                    <span className="ml-auto text-sm text-gray-500 dark:text-gray-400">
+                    <span className="ml-auto text-sm bg-wa-teal/10 text-wa-teal px-2 py-1 rounded-full">
                         {unreadCount} unread
                     </span>
                 )}
             </div>
 
-            {/* Notifications List */}
-            <div className="flex-1 overflow-y-auto">
-                {loading ? (
-                    <div className="flex items-center justify-center h-64">
-                        <div className="w-12 h-12 border-4 border-wa-teal border-t-transparent rounded-full animate-spin"></div>
-                    </div>
-                ) : notifications.length === 0 ? (
-                    <div className="flex flex-col items-center justify-center h-64 text-center px-4">
-                        <div className="w-20 h-20 bg-gray-100 dark:bg-wa-dark-hover rounded-full flex items-center justify-center mb-4">
-                            <BellOff size={40} className="text-gray-400" />
-                        </div>
-                        <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
-                            No notifications yet
-                        </h3>
-                        <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm">
-                            When someone follows you or requests to follow, you'll see it here
-                        </p>
-                    </div>
-                ) : (
-                    <div className="divide-y divide-gray-200 dark:divide-wa-dark-border">
-                        {notifications.map(notification => (
-                            <NotificationItem
-                                key={notification.id}
-                                notification={notification}
-                                onActionTaken={handleActionTaken}
-                            />
-                        ))}
-                    </div>
+            {/* Mobile Header */}
+            <div className="flex md:hidden items-center justify-between px-4 py-4">
+                <div className="flex items-center gap-4">
+                    <button
+                        onClick={() => navigate(-1)}
+                        className="p-2 -ml-2 hover:bg-gray-100 dark:hover:bg-wa-dark-hover rounded-full transition-colors"
+                    >
+                        <ArrowLeft size={24} className="text-[#111b21] dark:text-gray-100" />
+                    </button>
+                    <h1 className="text-xl font-medium text-[#111b21] dark:text-gray-100">Notifications</h1>
+                </div>
+                {unreadCount > 0 && (
+                    <span className="text-sm text-gray-500 dark:text-gray-400">
+                        {unreadCount} unread
+                    </span>
                 )}
+            </div>
+
+            {/* Notifications List - Responsive Container */}
+            <div className="flex-1 overflow-y-auto">
+                <div className="max-w-3xl mx-auto">
+                    {loading ? (
+                        <div className="flex items-center justify-center h-64">
+                            <div className="w-12 h-12 border-4 border-wa-teal border-t-transparent rounded-full animate-spin"></div>
+                        </div>
+                    ) : notifications.length === 0 ? (
+                        <div className="flex flex-col items-center justify-center h-64 text-center px-4">
+                            <div className="w-20 h-20 bg-gray-100 dark:bg-wa-dark-hover rounded-full flex items-center justify-center mb-4">
+                                <BellOff size={40} className="text-gray-400" />
+                            </div>
+                            <h3 className="text-lg font-semibold text-gray-900 dark:text-gray-100 mb-2">
+                                No notifications yet
+                            </h3>
+                            <p className="text-sm text-gray-500 dark:text-gray-400 max-w-sm">
+                                When someone follows you or requests to follow, you'll see it here
+                            </p>
+                        </div>
+                    ) : (
+                        <div className="divide-y divide-gray-200 dark:divide-wa-dark-border">
+                            {notifications.map(notification => (
+                                <NotificationItem
+                                    key={notification.id}
+                                    notification={notification}
+                                    onActionTaken={handleActionTaken}
+                                />
+                            ))}
+                        </div>
+                    )}
+                </div>
             </div>
         </div>
     );

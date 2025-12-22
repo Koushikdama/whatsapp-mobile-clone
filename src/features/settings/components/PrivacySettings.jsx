@@ -1,7 +1,9 @@
 import React, { useState } from 'react';
-import { Lock, Unlock, Info, Users, ChevronRight } from 'lucide-react';
+import { Lock, Unlock, Info, Users, ChevronRight, Eye, MessageCircle, Clock, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { Card } from '../../../shared/components/ui';
+import SettingsHeader from '../../../shared/components/settings/SettingsHeader';
+import SettingCard from '../../../shared/components/settings/SettingCard';
 import userService from '../../../services/firebase/UserService';
 import { useApp } from '../../../shared/context/AppContext';
 
@@ -12,7 +14,7 @@ import { useApp } from '../../../shared/context/AppContext';
  */
 const PrivacySettings = () => {
     const navigate = useNavigate();
-    const { currentUser, updateUserProfile } = useApp();
+    const { currentUser, updateUserProfile, statusPrivacy, privacySettings } = useApp();
     const [isPrivate, setIsPrivate] = useState(currentUser?.isPrivate || false);
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState(null);
@@ -50,16 +52,12 @@ const PrivacySettings = () => {
     const blockedUsersCount = currentUser?.blockedUsers?.length || 0;
 
     return (
-        <div className="min-h-screen bg-gray-50 dark:bg-wa-dark-bg pb-20 md:pb-4">
-            <div className="max-w-2xl mx-auto p-4 space-y-4">
-                <div>
-                    <h2 className="text-2xl font-semibold text-wa-gray-900 dark:text-gray-100 mb-2">
-                        Privacy Settings
-                    </h2>
-                    <p className="text-sm text-wa-gray-500 dark:text-gray-400">
-                        Control who can see your profile and send you messages
-                    </p>
-                </div>
+        <div className="fixed inset-0 z-50 bg-gray-50 dark:bg-wa-dark-bg flex flex-col animate-in slide-in-from-right duration-200">
+            <SettingsHeader title="Privacy" />
+
+            <div className="flex-1 overflow-y-auto p-4">
+                <div className="max-w-2xl mx-auto space-y-4">
+
 
                 {/* Private Account Toggle */}
                 <Card hover>
@@ -144,7 +142,81 @@ const PrivacySettings = () => {
                     </div>
                 </Card>
 
+                    {/* WHO CAN SEE MY PERSONAL INFO */}
+                    <p className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide px-2 mt-6 mb-3">
+                        Who can see my personal info
+                    </p>
+
+                    {/* Last Seen & Online */}
+                    <SettingCard
+                        icon={Clock}
+                        title="Last Seen & Online"
+                        value={privacySettings?.lastSeen === 'everyone' ? 'Everyone' : privacySettings?.lastSeen === 'my_contacts' ? 'My Contacts' : 'Nobody'}
+                        onClick={() => navigate('/privacy/last-seen')}
+                        iconBgColor="bg-blue-50 dark:bg-blue-900/20"
+                        iconColor="text-blue-600 dark:text-blue-400"
+                    />
+
+                    {/* Profile Photo */}
+                    <SettingCard
+                        icon={Eye}
+                        title="Profile Photo"
+                        value={privacySettings?.profilePhoto === 'everyone' ? 'Everyone' : privacySettings?.profilePhoto === 'my_contacts' ? 'My Contacts' : 'Nobody'}
+                        onClick={() => navigate('/privacy/profile-photo')}
+                        iconBgColor="bg-purple-50 dark:bg-purple-900/20"
+                        iconColor="text-purple-600 dark:text-purple-400"
+                    />
+
+                    {/* About */}
+                    <SettingCard
+                        icon={MessageCircle}
+                        title="About"
+                        value={privacySettings?.about === 'everyone' ? 'Everyone' : privacySettings?.about === 'my_contacts' ? 'My Contacts' : 'Nobody'}
+                        onClick={() => navigate('/privacy/about')}
+                        iconBgColor="bg-green-50 dark:bg-green-900/20"
+                        iconColor="text-green-600 dark:text-green-400"
+                    />
+
+                    {/* Groups */}
+                    <SettingCard
+                        icon={Users}
+                        title="Groups"
+                        subtitle="Who can add me to groups"
+                        value={privacySettings?.groups === 'everyone' ? 'Everyone' : privacySettings?.groups === 'my_contacts' ? 'My Contacts' : 'Nobody'}
+                        onClick={() => navigate('/privacy/groups')}
+                        iconBgColor="bg-orange-50 dark:bg-orange-900/20"
+                        iconColor="text-orange-600 dark:text-orange-400"
+                    />
+
+                    {/* Status */}
+                    <SettingCard
+                        icon={Shield}
+                        title="Status"
+                        subtitle="Who can see my status updates"
+                        value="My Contacts"
+                        onClick={() => navigate('/status/privacy')}
+                        iconBgColor="bg-teal-50 dark:bg-teal-900/20"
+                        iconColor="text-teal-600 dark:text-teal-400"
+                    />
+
+                    <div className="space-y-3">
+                        <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 px-1">
+                            DISAPPEARING MESSAGES
+                        </h3>
+
+                        <SettingCard
+                            icon={Clock}
+                            title="Default Message Timer"
+                            subtitle="Set a timer for new chats"
+                            value="Off"
+                            onClick={() => navigate('/settings/privacy/disappearing-messages')}
+                            iconBgColor="bg-indigo-50 dark:bg-indigo-900/20"
+                            iconColor="text-indigo-600 dark:text-indigo-400"
+                        />
+                    </div>
+
                 {/* Blocked Users */}
+
                 <Card hover onClick={() => navigate('/settings/blocked-users')} className="cursor-pointer">
                     <div className="flex items-center justify-between">
                         <div className="flex items-center gap-4">
@@ -186,7 +258,9 @@ const PrivacySettings = () => {
                 </div>
             </div>
         </div>
+        </div>
     );
+
 };
 
 export default PrivacySettings;
