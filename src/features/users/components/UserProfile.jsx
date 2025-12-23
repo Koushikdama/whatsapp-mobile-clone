@@ -72,7 +72,7 @@ const UserProfile = () => {
         loadProfile();
     }, [userId, users, currentUserId, isOwnProfile]);
 
-    const canViewProfile = isOwnProfile || !profileUser.isPrivate || isFollowing(userId);
+    const canViewProfile = isOwnProfile || !profileUser?.isPrivate || isFollowing(userId);
 
     const handleMessage = async () => {
         // Import chat service dynamically
@@ -208,7 +208,7 @@ const UserProfile = () => {
                                 <FollowButton 
                                     targetUserId={userId} 
                                     className="flex-1"
-                                    isPrivate={profileUser.isPrivate}
+                                    isPrivate={profileUser?.isPrivate || false}
                                 />
 
                                 {/* Message Button - Only show if following */}

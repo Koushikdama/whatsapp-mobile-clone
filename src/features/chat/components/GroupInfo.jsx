@@ -2,10 +2,11 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User as UserIcon, Bell, Lock, Search, MoreVertical, Star, ThumbsUp, Trash2, LogOut, Pin, Palette, Check, Grid, Image as ImageIcon, Video as VideoIcon, FileText, BarChart2, ChevronRight, Download, Shield, EyeOff, ChevronDown, Unlock, CircleDashed, Plus, Settings, Ban, UserPlus, QrCode, X, Archive } from 'lucide-react';
+import { ArrowLeft, User as UserIcon, Bell, Lock, Search, MoreVertical, Star, ThumbsUp, Trash2, LogOut, Pin, Palette, Check, Grid, Image as ImageIcon, Video as VideoIcon, FileText, BarChart2, ChevronRight, Download, Shield, EyeOff, ChevronDown, Unlock, CircleDashed, Plus, Settings, Ban, UserPlus, QrCode, X, Archive, History } from 'lucide-react';
 import { useApp } from '../../../shared/context/AppContext';
 import { formatTimestamp } from '../../../shared/utils/formatTime';
 import StatusViewer from '../../status/components/StatusViewer';
+import EditButton from '../../../shared/components/ui/EditButton';
 
 const THEME_COLORS = [
     { name: 'Default', value: '' },
@@ -20,7 +21,7 @@ const THEME_COLORS = [
 const GroupInfo = () => {
     const { chatId } = useParams();
     const navigate = useNavigate();
-    const { chats, messages, currentUser, currentUserId, users, updateChatTheme, toggleChatLock, toggleArchiveChat, securitySettings, chatDocuments, chatSettings, updateGroupRole, updateGroupSettings, addGroupParticipants } = useApp();
+    const { chats, messages, currentUser, currentUserId, users, updateChatTheme, toggleChatLock, toggleArchiveChat, securitySettings, chatDocuments, chatSettings, updateGroupRole, updateGroupSettings, addGroupParticipants, updateGroupInfo } = useApp();
 
     // Tab State
     const [topTab, setTopTab] = useState('public');
@@ -63,6 +64,12 @@ const GroupInfo = () => {
     const [archivePin, setArchivePin] = useState('');
     const [archiveError, setArchiveError] = useState('');
 
+    // Edit Group Info Modals
+    const [showEditName, setShowEditName] = useState(false);
+    const [showEditDescription, setShowEditDescription] = useState(false);
+    const [editGroupName, setEditGroupName] = useState('');
+    const [editGroupDescription, setEditGroupDescription] = useState('');
+
     const chat = chats.find(c => c.id === chatId);
 
     // Initialize mock statuses for group participants
@@ -94,6 +101,20 @@ const GroupInfo = () => {
     const isOwner = myRole === 'owner';
     const isAdmin = myRole === 'admin' || isOwner;
     const canAddParticipants = isAdmin || chat.groupSettings?.addMembers === 'all';
+
+    // Edit permission check
+    const canEditGroupInfo = isGroup && (
+        chat.groupSettings?.editInfo === 'all' ||
+        (chat.groupSettings?.editInfo === 'admins' && isAdmin)
+    );
+
+    // Initialize edit values from chat data
+    useEffect(() => {
+        if (chat && isGroup) {
+            setEditGroupName(chat.groupName || '');
+            setEditGroupDescription(chat.groupDescription || '');
+        }
+    }, [chat, isGroup]);
 
     // --- Filtering Logic for Locked Dates ---
     const isDateLocked = (timestamp) => {
@@ -279,6 +300,32 @@ const GroupInfo = () => {
         } else {
             setArchiveError('Incorrect PIN');
             setArchivePin('');
+        }
+    };
+
+    // --- Edit Group Info Handlers ---
+    const handleSaveGroupName = async () => {
+        if (!editGroupName.trim() || editGroupName === chat.groupName) {
+            setShowEditName(false);
+            return;
+        }
+
+        const result = await updateGroupInfo(chatId, { groupName: editGroupName.trim() });
+        if (result.success) {
+            setShowEditName(false);
+        }
+    };
+
+    const handleSaveGroupDescription = async () => {
+        const trimmedDesc = editGroupDescription.trim();
+        if (trimmedDesc === (chat.groupDescription || '')) {
+            setShowEditDescription(false);
+            return;
+        }
+
+        const result = await updateGroupInfo(chatId, { groupDescription: trimmedDesc });
+        if (result.success) {
+            setShowEditDescription(false);
         }
     };
 
@@ -731,6 +778,31 @@ const GroupInfo = () => {
                         </div>
                     </div>
 
+                    {/* Show History to New Members Toggle (Owner Only) */}
+                    {isOwner && (
+                        <div className="bg-white dark:bg-wa-dark-header rounded-lg shadow-sm p-4 mt-4 flex justify-between items-center">
+                            <div className="flex items-center gap-3 flex-1 mr-4">
+                                <div className="w-9 h-9 bg-blue-50 dark:bg-blue-900/20 rounded-full flex items-center justify-center shrink-0">
+                                    <History size={18} className="text-blue-500" />
+                                </div>
+                                <div className="flex-1">
+                                    <h3 className="text-base text-[#111b21] dark:text-gray-100 mb-1">Show History to New Members</h3>
+                                    <p className="text-xs text-[#667781] dark:text-gray-500">
+                                        {chat.settings?.showHistoryToNewMembers !== false
+                                            ? 'New members can see all past messages'
+                                            : 'New members only see messages after joining'}
+                                    </p>
+                                </div>
+                            </div>
+                            <div
+                                onClick={() => updateGroupSettings(chat.id, { showHistoryToNewMembers: !(chat.settings?.showHistoryToNewMembers !== false) })}
+                                className={`w-10 h-6 rounded-full p-1 transition-colors cursor-pointer shrink-0 ${(chat.settings?.showHistoryToNewMembers !== false) ? 'bg-wa-teal' : 'bg-gray-300 dark:bg-gray-600'}`}
+                            >
+                                <div className={`bg-white w-4 h-4 rounded-full shadow-sm transition-transform ${(chat.settings?.showHistoryToNewMembers !== false) ? 'translate-x-4' : ''}`}></div>
+                            </div>
+                        </div>
+                    )}
+
                     {isOwner && (
                         <div className="bg-white dark:bg-wa-dark-header rounded-lg shadow-sm mt-4 overflow-hidden">
                             <div
@@ -940,11 +1012,34 @@ const GroupInfo = () => {
                         </div>
                     </div>
 
-                    <h1 className="text-2xl text-[#111b21] dark:text-gray-100 font-normal mb-1">{title}</h1>
-                    <p className="text-[#667781] dark:text-gray-500 text-base mb-4">{subtitle}</p>
+                    <div className="flex items-center gap-2">
+                        <h1 className="text-2xl text-[#111b21] dark:text-gray-100 font-normal">{title}</h1>
+                        {isGroup && canEditGroupInfo && (
+                            <EditButton
+                                onClick={() => setShowEditName(true)}
+                                size={18}
+                            />
+                        )}
+                    </div>
+                    <p className="text-[#667781] dark:text-gray-500 text-base mb-2">{subtitle}</p>
+
+                    {/* Group Description */}
+                    {isGroup && (
+                        <div className="flex items-center justify-center gap-2 px-6 max-w-md mx-auto">
+                            <p className="text-[#667781] dark:text-gray-400 text-sm text-center italic">
+                                {chat.groupDescription || 'No description'}
+                            </p>
+                            {canEditGroupInfo && (
+                                <EditButton
+                                    onClick={() => setShowEditDescription(true)}
+                                    size={14}
+                                />
+                            )}
+                        </div>
+                    )}
 
                     {/* Public / Private Toggle */}
-                    <div className="flex p-1 bg-gray-100 dark:bg-wa-dark-paper rounded-lg w-64 shadow-inner">
+                    <div className="flex p-1 bg-gray-100 dark:bg-wa-dark-paper rounded-lg w-64 shadow-inner mt-4">
                         <button
                             onClick={() => handleTabChange('public')}
                             className={`flex-1 py-1.5 text-sm font-medium rounded-md transition-all ${topTab === 'public' ? 'bg-white dark:bg-wa-dark-header text-wa-teal shadow-sm' : 'text-gray-500 dark:text-gray-400'}`}
@@ -1265,6 +1360,88 @@ const GroupInfo = () => {
                     </div>
                 )}
             </div>
+
+            {/* EDIT GROUP NAME MODAL */}
+            {
+                showEditName && createPortal(
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                        <div className="bg-white dark:bg-wa-dark-paper rounded-lg shadow-xl w-full max-w-sm p-6">
+                            <h3 className="text-lg font-medium text-[#111b21] dark:text-gray-100 mb-4">Edit Group Name</h3>
+                            <input
+                                type="text"
+                                value={editGroupName}
+                                onChange={(e) => setEditGroupName(e.target.value)}
+                                onKeyDown={(e) => e.key === 'Enter' && handleSaveGroupName()}
+                                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
+                                     bg-white dark:bg-wa-dark-input text-[#111b21] dark:text-gray-100 
+                                     outline-none focus:border-wa-teal transition-colors"
+                                placeholder="Enter group name"
+                                autoFocus
+                                maxLength={50}
+                            />
+                            <p className="text-xs text-gray-500 mt-1">{editGroupName.length}/50</p>
+                            <div className="flex gap-3 mt-6">
+                                <button
+                                    onClick={() => {
+                                        setShowEditName(false);
+                                        setEditGroupName(chat.groupName || '');
+                                    }}
+                                    className="flex-1 py-2 text-wa-teal font-medium hover:bg-wa-grayBg dark:hover:bg-wa-dark-hover rounded-full transition-colors">
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSaveGroupName}
+                                    disabled={!editGroupName.trim()}
+                                    className="flex-1 py-2 bg-wa-teal text-white font-medium rounded-full shadow-sm 
+                                         hover:shadow-md transition-all disabled:opacity-50 disabled:cursor-not-allowed">
+                                    Save
+                                </button>
+                            </div>
+                        </div>
+                    </div>,
+                    document.body
+                )
+            }
+
+            {/* EDIT GROUP DESCRIPTION MODAL */}
+            {
+                showEditDescription && createPortal(
+                    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200">
+                        <div className="bg-white dark:bg-wa-dark-paper rounded-lg shadow-xl w-full max-w-sm p-6">
+                            <h3 className="text-lg font-medium text-[#111b21] dark:text-gray-100 mb-4">Edit Group Description</h3>
+                            <textarea
+                                value={editGroupDescription}
+                                onChange={(e) => setEditGroupDescription(e.target.value)}
+                                className="w-full px-4 py-2 border border-gray-300 dark:border-gray-600 rounded-lg 
+                                     bg-white dark:bg-wa-dark-input text-[#111b21] dark:text-gray-100 
+                                     outline-none focus:border-wa-teal transition-colors resize-none"
+                                placeholder="Add a group description"
+                                rows={4}
+                                autoFocus
+                                maxLength={200}
+                            />
+                            <p className="text-xs text-gray-500 mt-1">{editGroupDescription.length}/200</p>
+                            <div className="flex gap-3 mt-6">
+                                <button
+                                    onClick={() => {
+                                        setShowEditDescription(false);
+                                        setEditGroupDescription(chat.groupDescription || '');
+                                    }}
+                                    className="flex-1 py-2 text-wa-teal font-medium hover:bg-wa-grayBg dark:hover:bg-wa-dark-hover rounded-full transition-colors">
+                                    Cancel
+                                </button>
+                                <button
+                                    onClick={handleSaveGroupDescription}
+                                    className="flex-1 py-2 bg-wa-teal text-white font-medium rounded-full shadow-sm 
+                                         hover:shadow-md transition-all">
+                                    Save
+                                </button>
+                            </div>
+                        </div>
+                    </div>,
+                    document.body
+                )
+            }
         </div>
     );
 };

@@ -1,141 +1,142 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Chess } from 'chess.js';
 
-export const useChessGame = (onMove) => {
+/**
+ * Custom hook for Chess game logic (Single Responsibility Principle)
+ * Handles all chess-specific game state and move validation for MULTIPLAYER
+ * Separated from UI rendering and timer logic
+ * 
+ * @param {Object} activeGame - Current active game from AppContext
+ * @param {string} currentUserId - Current user's ID
+ * @param {Function} makeGameMove - Function to broadcast moves via WebSocket
+ */
+const useChessGame = (activeGame, currentUserId, makeGameMove) => {
     const [game, setGame] = useState(new Chess());
-    const [moveFrom, setMoveFrom] = useState("");
-    const [optionSquares, setOptionSquares] = useState({});
-    const [history, setHistory] = useState([]); // Track history for potential undo functionality in future
+    const [selectedSquare, setSelectedSquare] = useState(null);
+    const [possibleMoves, setPossibleMoves] = useState([]);
+    const [gameOver, setGameOver] = useState(false);
+    const [winner, setWinner] = useState(null);
+    const [turn, setTurn] = useState('w');
 
-    // Helper to safely mutate game state
-    const safeGameMutate = (modify) => {
-        setGame((g) => {
-            const update = new Chess(g.fen());
-            modify(update);
-            return update;
-        });
-    };
+    // Determine player color from activeGame
+    const myPlayer = activeGame?.players?.find(p => p.userId === currentUserId);
+    const playerColor = myPlayer?.color === 'white' ? 'w' : 'b';
+
+    // Sync game state from WebSocket updates (multiplayer synchronization)
+    useEffect(() => {
+        if (activeGame?.gameState?.fen && activeGame.gameState.fen !== game.fen()) {
+            const newGame = new Chess(activeGame.gameState.fen);
+            setGame(newGame);
+            setTurn(newGame.turn());
+            setSelectedSquare(null);
+            setPossibleMoves([]);
+
+            // Check for game over
+            if (newGame.isGameOver()) {
+                setGameOver(true);
+                setWinner(newGame.turn() === 'w' ? 'Black' : 'White');
+            }
+        }
+    }, [activeGame?.gameState?.fen, game]);
 
     /**
-     * Attempts to make a move on the board.
-     * @param {Object} move - The move object {from, to, promotion}
-     * @returns {Object|null} - The move result object if successful, null otherwise
+     * Handle square click - validates and makes moves
      */
-    const makeAMove = useCallback((move) => {
-        const gameCopy = new Chess(game.fen());
+    const handleSquareClick = useCallback((square) => {
+        if (gameOver) return;
+        if (turn !== playerColor) return; // Only allow moves during player's turn
+
+        // Select piece
+        if (!selectedSquare) {
+            const piece = game.get(square);
+            if (piece && piece.color === game.turn()) {
+                setSelectedSquare(square);
+                const moves = game.moves({ square, verbose: true }).map(m => m.to);
+                setPossibleMoves(moves);
+            }
+            return;
+        }
+
+        // Deselect if clicking same square
+        if (selectedSquare === square) {
+            setSelectedSquare(null);
+            setPossibleMoves([]);
+            return;
+        }
+
+        // Try to make move
         try {
-            const result = gameCopy.move(move);
-            if (result) {
-                setGame(gameCopy);
-                if (onMove) onMove(gameCopy.fen());
-                return result;
+            const newGame = new Chess(game.fen());
+            const move = newGame.move({
+                from: selectedSquare,
+                to: square,
+                promotion: 'q' // Auto-promote to queen
+            });
+
+            if (move) {
+                setGame(newGame);
+                setSelectedSquare(null);
+                setPossibleMoves([]);
+                setTurn(newGame.turn());
+
+                // Broadcast move via WebSocket to other player
+                if (activeGame) {
+                    makeGameMove(activeGame.id, {
+                        fen: newGame.fen(),
+                        move: move,
+                        turn: newGame.turn()
+                    });
+                }
+
+                // Check for game over
+                if (newGame.isGameOver()) {
+                    setGameOver(true);
+                    setWinner(newGame.turn() === 'w' ? 'Black' : 'White');
+                }
+            } else {
+                // If invalid move, try selecting another piece
+                const piece = game.get(square);
+                if (piece && piece.color === game.turn()) {
+                    setSelectedSquare(square);
+                    const moves = game.moves({ square, verbose: true }).map(m => m.to);
+                    setPossibleMoves(moves);
+                } else {
+                    setSelectedSquare(null);
+                    setPossibleMoves([]);
+                }
             }
         } catch (e) {
-            return null;
+            setSelectedSquare(null);
+            setPossibleMoves([]);
         }
-        return null;
-    }, [game, onMove]);
+    }, [game, selectedSquare, gameOver, turn, playerColor, activeGame, makeGameMove]);
 
     /**
-     * Makes a random move for the AI (Black)
+     * Reset game to initial state
      */
-    const makeRandomMove = useCallback(() => {
-        const possibleMoves = game.moves();
-        if (game.isGameOver() || game.isDraw() || possibleMoves.length === 0) return;
-
-        // Simple optimization: Try to capture a piece if possible, otherwise random
-        const captureMoves = possibleMoves.filter(m => m.includes('x'));
-        const move = captureMoves.length > 0
-            ? captureMoves[Math.floor(Math.random() * captureMoves.length)]
-            : possibleMoves[Math.floor(Math.random() * possibleMoves.length)];
-
-        safeGameMutate((g) => {
-            g.move(move);
-            if (onMove) onMove(g.fen());
-        });
-    }, [game, onMove]);
-
-    // AI Turn Effect
-    useEffect(() => {
-        if (game.turn() === 'b' && !game.isGameOver()) {
-            const timer = setTimeout(makeRandomMove, 1000);
-            return () => clearTimeout(timer);
-        }
-    }, [game, makeRandomMove]);
-
-    /**
-     * Handles DnD drop event
-     */
-    function onDrop(sourceSquare, targetSquare) {
-        const move = makeAMove({
-            from: sourceSquare,
-            to: targetSquare,
-            promotion: "q",
-        });
-        return move !== null;
-    }
-
-    /**
-     * Handles Click-to-move interaction
-     */
-    function onSquareClick(square) {
-        const piece = game.get(square);
-
-        // Case 1: Clicking to move a selected piece
-        if (moveFrom) {
-            const move = makeAMove({
-                from: moveFrom,
-                to: square,
-                promotion: "q",
-            });
-
-            // If move valid, reset selection
-            if (move) {
-                setMoveFrom("");
-                setOptionSquares({});
-                return;
-            }
-        }
-
-        // Case 2: Selecting a piece (or changing selection)
-        // Only select if it's the player's turn (White's pieces) and the piece exists
-        if (piece && piece.color === game.turn()) {
-            // Allow re-selection or new selection
-            setMoveFrom(square);
-
-            // Highlight moves
-            const moves = game.moves({ square, verbose: true });
-            const newSquares = {};
-            moves.forEach((m) => {
-                newSquares[m.to] = {
-                    background: "radial-gradient(circle, rgba(0,0,0,.1) 25%, transparent 25%)",
-                    borderRadius: "50%",
-                };
-            });
-            newSquares[square] = { background: "rgba(255, 255, 0, 0.4)" };
-            setOptionSquares(newSquares);
-        } else {
-            // Clicking empty square or opponent piece without a valid move pending -> deselect
-            setMoveFrom("");
-            setOptionSquares({});
-        }
-    }
-
-    const resetGame = () => {
+    const resetGame = useCallback(() => {
         setGame(new Chess());
-        setMoveFrom("");
-        setOptionSquares({});
-    };
+        setSelectedSquare(null);
+        setPossibleMoves([]);
+        setGameOver(false);
+        setWinner(null);
+        setTurn('w');
+    }, []);
 
     return {
         game,
-        optionSquares,
-        onDrop,
-        onSquareClick,
+        selectedSquare,
+        possibleMoves,
+        gameOver,
+        winner,
+        turn,
+        playerColor,
+        handleSquareClick,
         resetGame,
-        isGameOver: game.isGameOver(),
         isCheckmate: game.isCheckmate(),
         isDraw: game.isDraw(),
-        turn: game.turn()
+        inCheck: game.inCheck()
     };
 };
+
+export default useChessGame;

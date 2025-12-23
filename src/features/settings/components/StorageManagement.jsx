@@ -6,8 +6,8 @@
 
 import React, { useState, useMemo } from 'react';
 import { useApp } from '../../../shared/context/AppContext';
-import SettingsHeader from '../../../shared/components/settings/SettingsHeader';
-import DonutChart from '../../../shared/components/settings/DonutChart';
+import SettingsHeader from '../../../shared/components/settings/SettingsHeader.jsx';
+import DonutChart from '../../../shared/components/settings/DonutChart.jsx';
 import { ChevronDown, Image, File, Music, FileText } from 'lucide-react';
 
 const StorageManagement = () => {

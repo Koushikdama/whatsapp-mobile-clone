@@ -1,18 +1,22 @@
 import React, { useState, useEffect } from 'react';
 import { Chess } from 'chess.js';
-import { useGame } from '../context/GameContext';
+import { useApp } from '../../../shared/context/AppContext';
 import { Clock, RotateCcw } from 'lucide-react';
 import { GAME_CONFIG, GAME_TYPES } from '../../../shared/constants/gameConstants';
 import ResponsiveGameContainer from '../../../shared/components/games/ResponsiveGameContainer';
 
 const ChessGame = ({ onMove, timeControl }) => {
-    const { activeGame } = useGame();
+    const { activeGame, makeGameMove, currentUserId } = useApp();
     const chessConfig = GAME_CONFIG[GAME_TYPES.CHESS];
     const defaultTimeControl = timeControl || chessConfig.defaultTimeControl || 600; // Default 10 minutes (600 seconds)
     const [game, setGame] = useState(new Chess());
     const [selectedSquare, setSelectedSquare] = useState(null);
     const [possibleMoves, setPossibleMoves] = useState([]);
-    const [playerColor, setPlayerColor] = useState('w'); // 'w' for white, 'b' for black
+
+    // Determine player color from activeGame
+    const myPlayer = activeGame?.players?.find(p => p.userId === currentUserId);
+    const playerColor = myPlayer?.color === 'white' ? 'w' : 'b';
+
     const [gameOver, setGameOver] = useState(false);
     const [turn, setTurn] = useState('w');
 
@@ -62,29 +66,16 @@ const ChessGame = ({ onMove, timeControl }) => {
         return () => clearInterval(interval);
     }, [timerActive, turn, gameOver, timeExpired]);
 
-    // AI Move Logic (Random)
+    // Sync game state from activeGame updates (multiplayer)
     useEffect(() => {
-        if (turn !== playerColor && !gameOver && timerActive) {
-            setTimeout(() => {
-                const moves = game.moves();
-                if (moves.length > 0) {
-                    const randomMove = moves[Math.floor(Math.random() * moves.length)];
-                    const newGame = new Chess(game.fen());
-                    newGame.move(randomMove);
-                    setGame(newGame);
-                    setTurn(newGame.turn());
-
-                    if (onMove) onMove(newGame.fen());
-
-                    if (newGame.isGameOver()) {
-                        setGameOver(true);
-                        setWinner(newGame.turn() === 'w' ? 'Black' : 'White');
-                        setTimerActive(false);
-                    }
-                }
-            }, 500);
+        if (activeGame?.gameState?.fen && activeGame.gameState.fen !== game.fen()) {
+            const newGame = new Chess(activeGame.gameState.fen);
+            setGame(newGame);
+            setTurn(newGame.turn());
+            setSelectedSquare(null);
+            setPossibleMoves([]);
         }
-    }, [turn, playerColor, gameOver, timerActive, game, onMove]);
+    }, [activeGame?.gameState?.fen]);
 
     const handleSquareClick = (square) => {
         if (gameOver) return; // Prevent moves if game is over
@@ -125,7 +116,14 @@ const ChessGame = ({ onMove, timeControl }) => {
                 setPossibleMoves([]);
                 setTurn(newGame.turn()); // Update turn
 
-                if (onMove) onMove(newGame.fen());
+                // Broadcast move to other player via WebSocket
+                if (activeGame) {
+                    makeGameMove(activeGame.id, {
+                        fen: newGame.fen(),
+                        move: move,
+                        turn: newGame.turn()
+                    });
+                }
 
                 // Start timer on first move
                 if (!timerActive) {
@@ -155,6 +153,7 @@ const ChessGame = ({ onMove, timeControl }) => {
         }
     };
 
+    // Render chess board
     const board = [];
     const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'];
     const ranks = ['8', '7', '6', '5', '4', '3', '2', '1'];
@@ -166,25 +165,29 @@ const ChessGame = ({ onMove, timeControl }) => {
             const isDark = (r + f) % 2 === 1;
             const isSelected = selectedSquare === square;
             const isPossible = possibleMoves.includes(square);
-            const inCheck = piece?.type === 'k' && piece.color === game.turn() && game.inCheck();
+            const inCheckSquare = piece?.type === 'k' && piece.color === game.turn() && game.inCheck();
 
             board.push(
                 <div
                     key={square}
-                    onClick={() => handleSquareClick(square)}
+                    onClick={() => {
+                        handleSquareClick(square);
+                        // Start timer on first move
+                        if (!timerActive && game.history().length === 1) {
+                            startTimer();
+                        }
+                    }}
                     className={`
                         w-[12.5%] aspect-square flex items-center justify-center text-3xl cursor-pointer relative select-none
                         ${isDark ? 'bg-[#769656]' : 'bg-[#eeeed2]'}
                         ${isSelected ? 'bg-yellow-200 ring-inset ring-4 ring-yellow-400' : ''}
-                        ${inCheck ? 'bg-red-500' : ''}
+                        ${inCheckSquare ? 'bg-red-500' : ''}
                     `}
                 >
                     {isPossible && (
                         <div className={`absolute w-3 h-3 rounded-full ${piece ? 'ring-4 ring-black/20 w-full h-full rounded-none' : 'bg-black/20'}`}></div>
                     )}
                     <span className={`${piece?.color === 'w' ? 'text-white drop-shadow-md' : 'text-black'}`}>
-                        {piece ? PIECES[piece.type === 'p' ? (piece.color === 'w' ? 'P' : 'p') : piece.type] : ''}
-                        {/* Fallback to text if unicode fails visually, but using piece.type for logic mapping above */}
                         {piece && PIECES[piece.color === 'w' ? piece.type.toUpperCase() : piece.type]}
                     </span>
 

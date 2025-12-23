@@ -152,6 +152,9 @@ export const AppProvider = ({ children }) => {
               }
             }));
 
+            // Initialize WebSocket connection for real-time game events
+            webSocketService.connect(user.uid);
+
             console.log('✅ User profile loaded:', userProfile.name);
           }
         } catch (error) {
@@ -172,6 +175,9 @@ export const AppProvider = ({ children }) => {
             ...prev,
             [user.uid]: fallbackUser
           }));
+
+          // Initialize WebSocket connection for real-time game events
+          webSocketService.connect(user.uid);
         }
         
         // Load settings from Firebase
@@ -374,6 +380,45 @@ export const AppProvider = ({ children }) => {
             // Set Firebase chats as the only source of truth
             setChats(transformedChats);
             console.log(`✅ Set ${transformedChats.length} chats from Firebase`);
+
+            // 🔔 SET UP REAL-TIME LISTENER for live updates
+            console.log('🔔 Setting up real-time chat listener...');
+            chatFirebaseService.subscribeToUserChats(user.uid, (updatedChats) => {
+              console.log('📡 Real-time update received:', updatedChats.length, 'chats');
+
+              const transformedUpdates = updatedChats.map(chat => ({
+                id: chat.id,
+                isGroup: chat.type === 'group',
+                groupName: chat.groupName,
+                groupAvatar: chat.groupAvatar,
+                groupDescription: chat.groupDescription,
+                groupParticipants: chat.participants,
+                groupRoles: chat.groupRoles,
+                groupSettings: chat.groupSettings,
+                contactId: chat.type === 'individual' ? chat.participants.find(p => p !== user.uid) : undefined,
+                timestamp: chat.updatedAt || chat.createdAt,
+                lastMessageId: chat.lastMessageId,
+                unreadCount: chat.userSettings?.unreadCount || 0,
+                isPinned: chat.userSettings?.isPinned || false,
+                isMuted: chat.userSettings?.isMuted || false,
+                isArchived: chat.userSettings?.isArchived || false,
+                isLocked: chat.userSettings?.isLocked || false,
+                userSettings: {
+                  isPinned: chat.userSettings?.isPinned || false,
+                  isMuted: chat.userSettings?.isMuted || false,
+                  isArchived: chat.userSettings?.isArchived || false,
+                  isLocked: chat.userSettings?.isLocked || false,
+                  hiddenDates: chat.userSettings?.hiddenDates || [],
+                  unreadCount: chat.userSettings?.unreadCount || 0,
+                  themeColor: chat.userSettings?.themeColor || null,
+                  incomingThemeColor: chat.userSettings?.incomingThemeColor || null,
+                  wallpaper: chat.userSettings?.wallpaper || null
+                }
+              }));
+
+              setChats(transformedUpdates);
+              console.log('✅ Real-time sync: Updated chats');
+            });
           } else {
             console.log('⚠️ No chats found in Firebase');
           }
@@ -557,6 +602,9 @@ export const AppProvider = ({ children }) => {
       messageSubscriptions.forEach(unsubscribe => unsubscribe());
       setMessageSubscriptions(new Map());
       
+      // Disconnect WebSocket
+      webSocketService.disconnect();
+
       // Clear all local state
       setChats([]);
       setMessages({});
@@ -792,53 +840,66 @@ export const AppProvider = ({ children }) => {
     return newChatId;
   }, [chats, currentUser]);
 
-  const createGroup = useCallback((groupName, participantIds) => {
-    const newChatId = `c_g_${Date.now()}`;
-    const groupRoles = {};
+  const createGroup = useCallback(async (groupName, participantIds) => {
+    try {
+      console.log('🔵 Creating group:', groupName, 'with participants:', participantIds);
 
-    // Creator is owner
-    groupRoles[currentUser.id] = 'owner';
-    participantIds.forEach(id => groupRoles[id] = 'member');
+      // Call Firebase service to create group (this also sends notifications and system message)
+      const result = await chatFirebaseService.createGroupChat(
+        currentUser.id,
+        groupName,
+        participantIds,
+        {} // groupData (optional avatar, description, etc.)
+      );
 
-    const newChat = {
-      id: newChatId,
-      contactId: '', // No single contact ID for group
-      unreadCount: 0,
-      isPinned: false,
-      isMuted: false,
-      isGroup: true,
-      groupName: groupName,
-      groupParticipants: [...participantIds, currentUser.id],
-      groupRoles: groupRoles,
-      groupSettings: {
-        editInfo: 'all',
-        sendMessages: 'all',
-        addMembers: 'all',
-        approveMembers: false
-      },
-      timestamp: new Date().toISOString()
-    };
+      if (!result.success) {
+        console.error('❌ Failed to create group:', result.error);
+        throw new Error(result.error || 'Failed to create group');
+      }
 
-    setChats([newChat, ...chats]);
+      console.log('✅ Group created in Firebase:', result.chatId);
 
-    // Add initial system message
-    const sysMsgId = `m_${Date.now()}`;
-    setMessages(prev => ({
-      ...prev,
-      [newChatId]: [{
-        id: sysMsgId,
-        chatId: newChatId,
-        senderId: 'system',
-        text: `You created group "${groupName}"`,
-        timestamp: new Date().toISOString(),
-        status: 'read',
-        type: 'text',
-        isPinned: false
-      }]
-    }));
+      // NOTE: No optimistic update needed here!
+      // The Firebase real-time listener (subscribeToUserChats) will automatically
+      // detect the new group and add it to the chats array.
+      // Doing both creates duplicates because:
+      // 1. We add it here with setChats
+      // 2. Firebase listener adds it again when it detects the change
+      // The Firebase listener is fast enough that users won't notice the delay.
 
-    return newChatId;
-  }, [currentUser, chats]);
+      console.log('🎉 Group creation complete! Waiting for Firebase listener to sync...');
+      return result.chatId;
+    } catch (error) {
+      console.error('❌ Error creating group:', error);
+      // Return a local-only group as fallback
+      const fallbackId = `c_g_${Date.now()}`;
+      const groupRoles = {};
+      groupRoles[currentUser.id] = 'owner';
+      participantIds.forEach(id => groupRoles[id] = 'member');
+
+      const newChat = {
+        id: fallbackId,
+        contactId: '',
+        unreadCount: 0,
+        isPinned: false,
+        isMuted: false,
+        isGroup: true,
+        groupName: groupName,
+        groupParticipants: [...participantIds, currentUser.id],
+        groupRoles: groupRoles,
+        groupSettings: {
+          editInfo: 'all',
+          sendMessages: 'all',
+          addMembers: 'all',
+          approveMembers: false
+        },
+        timestamp: new Date().toISOString()
+      };
+
+      setChats(prev => [newChat, ...prev]);
+      return fallbackId;
+    }
+  }, [currentUser]);
 
   const addGroupParticipants = useCallback((chatId, participantIds) => {
     setChats(prev => prev.map(c => {
@@ -902,6 +963,34 @@ export const AppProvider = ({ children }) => {
       }
       return c;
     }));
+  }, []);
+
+  const updateGroupInfo = useCallback(async (chatId, updates) => {
+    try {
+      console.log('🔵 Updating group info:', chatId, updates);
+
+      // Call Firebase service
+      const result = await chatFirebaseService.updateGroupInfo(chatId, updates);
+
+      if (!result.success) {
+        console.error('❌ Failed to update group info');
+        return { success: false, error: result.error };
+      }
+
+      // Update local state
+      setChats(prev => prev.map(chat => {
+        if (chat.id === chatId && chat.isGroup) {
+          return { ...chat, ...updates };
+        }
+        return chat;
+      }));
+
+      console.log('✅ Group info updated');
+      return { success: true };
+    } catch (error) {
+      console.error('❌ Error:', error);
+      return { success: false, error: error.message };
+    }
   }, []);
 
   const markMessageAsViewed = useCallback((chatId, messageId) => {
@@ -1499,12 +1588,38 @@ export const AppProvider = ({ children }) => {
   /**
    * Join a game from invitation
    */
-  const joinGame = useCallback((gameType, roomId, chatId) => {
-    // Get room
-    const room = gameRooms.get(roomId);
+  const joinGame = useCallback((gameType, roomId, chatId, messageData) => {
+    // Try to get room from local state
+    let room = gameRooms.get(roomId);
+
+    // If room not found but we have message data, reconstruct it
+    if (!room && messageData) {
+      console.log('🔧 Room not found locally, reconstructing from message data');
+
+      room = {
+        id: roomId,
+        gameId: messageData.gameId || `game_${Date.now()}`,
+        gameType,
+        hostId: messageData.hostId,
+        chatId,
+        players: messageData.players ? messageData.players.map(p => ({ userId: p, ready: false })) : [],
+        maxPlayers: messageData.maxPlayers || (gameType === 'ludo' || gameType === 'snake' ? 4 : 2),
+        status: messageData.status || 'waiting',
+        createdAt: messageData.createdAt || new Date().toISOString()
+      };
+
+      // Add reconstructed room to state
+      setGameRooms(prev => {
+        const newRooms = new Map(prev);
+        newRooms.set(roomId, room);
+        return newRooms;
+      });
+
+      console.log('✅ Room reconstructed and added to state');
+    }
     
     if (!room) {
-      console.error('Game room not found:', roomId);
+      console.warn('⚠️ Game room not found or already ended:', roomId);
       return;
     }
 
@@ -1599,16 +1714,16 @@ export const AppProvider = ({ children }) => {
     const game = activeGames.get(gameId);
     if (!game) return;
 
+    // Update local game state
+    updateGameState(gameId, move);
+
     // Broadcast move to other players
     webSocketService.sendGameEvent(GameEventTypes.GAME_MOVE, {
       gameId,
-      move,
+      gameState: move,
       playerId: currentUser.id,
       timestamp: new Date().toISOString()
     });
-
-    // Move handling will be done by individual game components
-    // They will call updateGameState after processing the move
   }, [activeGames, currentUser]);
 
   /**
@@ -1759,8 +1874,6 @@ export const AppProvider = ({ children }) => {
 
     // Actions
     // prevent duplicates: login/logout were here twice
-    updateChatSettings,
-    updateSecuritySettings,
     updateAppSettings,
     toggleTheme,
     updateUserProfile,
@@ -1770,6 +1883,7 @@ export const AppProvider = ({ children }) => {
     addGroupParticipants,
     updateGroupSettings,
     updateGroupRole,
+    updateGroupInfo,
     addMessage,
     votePoll,
     // Game Actions
@@ -1841,7 +1955,7 @@ export const AppProvider = ({ children }) => {
     isAuthenticated, authLoading, firebaseUser, login, logout,
     updateChatSettings, updateSecuritySettings, updateAppSettings,
     toggleTheme, updateUserProfile, setDraft, startChat, createGroup,
-    addGroupParticipants, updateGroupSettings, updateGroupRole, addMessage,
+    addGroupParticipants, updateGroupSettings, updateGroupRole, updateGroupInfo, addMessage,
     votePoll, deleteMessages, deleteForMe, deleteForEveryone, canDeleteForEveryone, hiddenMessages,
     toggleArchiveChat, togglePinChat,
     toggleDateLock, addStatusUpdate, deleteStatusUpdate, setSearchQuery,

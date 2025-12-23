@@ -4,6 +4,7 @@
  */
 
 import { db } from '../../config/firebaseConfig';
+import notificationFirebaseService, { NOTIFICATION_TYPES } from './NotificationFirebaseService';
 import {
     doc,
     getDoc,
@@ -99,6 +100,9 @@ class ChatFirebaseService extends FirebaseService {
                     addMembers: 'all',
                     approveMembers: false
                 },
+                settings: {
+                    showHistoryToNewMembers: true  // Default: new members see history
+                },
                 createdBy: userId,
                 createdAt: serverTimestamp(),
                 updatedAt: serverTimestamp(),
@@ -110,6 +114,63 @@ class ChatFirebaseService extends FirebaseService {
             // Create user-specific settings for all participants
             for (const participantId of allParticipants) {
                 await this.createUserChatSettings(chatId, participantId);
+            }
+
+            // Send notifications to all participants (except the creator)
+            console.log(`📬 Sending notifications to ${participantIds.length} members...`);
+            const notificationPromises = participantIds.map(async (participantId) => {
+                try {
+                    await notificationFirebaseService.createNotification(
+                        participantId,                      // Receiver
+                        userId,                             // Creator (actor)
+                        NOTIFICATION_TYPES.ADDED_TO_GROUP,
+                        {
+                            groupId: chatId,
+                            groupName: groupName,
+                            groupAvatar: groupData.groupAvatar || null
+                        }
+                    );
+                    console.log(`✅ Notification sent to ${participantId}`);
+                } catch (error) {
+                    console.error(`❌ Failed to send notification to ${participantId}:`, error);
+                    // Don't fail the whole group creation if notification fails
+                }
+            });
+
+            await Promise.all(notificationPromises);
+            console.log(`🎉 Group created successfully with ${participantIds.length} notifications sent`);
+
+            // Add system message to group chat showing who created it and who was added
+            try {
+                const { default: messageFirebaseService } = await import('./MessageFirebaseService');
+
+                // Get creator's name from Firebase or use ID as fallback
+                let creatorName = 'Someone';
+                try {
+                    const { default: userService } = await import('./UserService');
+                    const creatorResult = await userService.getUser(userId);
+                    if (creatorResult.success && creatorResult.user) {
+                        creatorName = creatorResult.user.name || creatorName;
+                    }
+                } catch (error) {
+                    console.warn('Could not fetch creator name:', error);
+                }
+
+                // Create system message
+                const systemMessageContent = participantIds.length === 1
+                    ? `${creatorName} added you`
+                    : `${creatorName} created this group`;
+
+                await messageFirebaseService.sendMessage(chatId, {
+                    senderId: 'system',
+                    text: systemMessageContent,
+                    type: 'system'
+                });
+
+                console.log('✅ System message added to group chat');
+            } catch (error) {
+                console.error('❌ Failed to add system message:', error);
+                // Don't fail group creation if system message fails
             }
 
             return {
@@ -194,6 +255,60 @@ class ChatFirebaseService extends FirebaseService {
             };
         } catch (error) {
             console.error('[ChatService] Get user chats error:', error);
+            throw handleFirebaseError(error);
+        }
+    }
+
+    /**
+     * Subscribe to real-time chat updates for a user
+     * Returns an unsubscribe function
+     */
+    subscribeToUserChats(userId, callback) {
+        try {
+            const { onSnapshot } = require('firebase/firestore');
+
+            const chatsRef = collection(db, this.collectionName);
+            const q = query(
+                chatsRef,
+                where('participants', 'array-contains', userId)
+            );
+
+            console.log('🔔 Setting up real-time chat listener for user:', userId);
+
+            const unsubscribe = onSnapshot(q, async (snapshot) => {
+                console.log('📡 Received chat update:', snapshot.docs.length, 'chats');
+
+                const chats = [];
+
+                for (const chatDoc of snapshot.docs) {
+                    const chatData = { id: chatDoc.id, ...chatDoc.data() };
+
+                    // Get user-specific settings
+                    const settingsRef = doc(db, this.collectionName, chatDoc.id, 'userSettings', userId);
+                    const settingsSnap = await getDoc(settingsRef);
+
+                    if (settingsSnap.exists()) {
+                        chatData.userSettings = settingsSnap.data();
+                    }
+
+                    chats.push(chatData);
+                }
+
+                // Sort by updatedAt
+                chats.sort((a, b) => {
+                    const aTime = a.updatedAt?.toMillis?.() || 0;
+                    const bTime = b.updatedAt?.toMillis?.() || 0;
+                    return bTime - aTime;
+                });
+
+                callback(chats);
+            }, (error) => {
+                console.error('❌ Chat listener error:', error);
+            });
+
+            return unsubscribe;
+        } catch (error) {
+            console.error('[ChatService] Subscribe to chats error:', error);
             throw handleFirebaseError(error);
         }
     }
@@ -311,6 +426,42 @@ class ChatFirebaseService extends FirebaseService {
             return { success: true };
         } catch (error) {
             console.error('[ChatService] Update chat error:', error);
+            throw handleFirebaseError(error);
+        }
+    }
+
+    /**
+     * Update group info (name, avatar, description)
+     * Only allows updating specific group-related fields
+     */
+    async updateGroupInfo(chatId, updates) {
+        try {
+            console.log('🔵 Updating group info:', chatId, updates);
+
+            // Only allow specific fields to be updated
+            const allowedFields = ['groupName', 'groupAvatar', 'groupDescription'];
+            const filteredUpdates = Object.keys(updates)
+                .filter(key => allowedFields.includes(key))
+                .reduce((obj, key) => {
+                    obj[key] = updates[key];
+                    return obj;
+                }, {});
+
+            if (Object.keys(filteredUpdates).length === 0) {
+                console.warn('⚠️ No valid fields to update');
+                return { success: false, error: 'No valid fields to update' };
+            }
+
+            const chatRef = doc(db, this.collectionName, chatId);
+            await updateDoc(chatRef, {
+                ...filteredUpdates,
+                updatedAt: serverTimestamp()
+            });
+
+            console.log('✅ Group info updated successfully');
+            return { success: true };
+        } catch (error) {
+            console.error('[ChatService] Update group info error:', error);
             throw handleFirebaseError(error);
         }
     }

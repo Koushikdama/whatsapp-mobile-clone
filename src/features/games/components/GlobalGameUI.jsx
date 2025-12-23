@@ -1,14 +1,14 @@
 import React from 'react';
-import { useGame } from '../context/GameContext';
+import { useApp } from '../../../shared/context/AppContext';
 import GameInviteModal from './GameInviteModal';
 import FloatingGameView from './FloatingGameView';
 import GameNotifications from './GameNotifications';
 
 const GlobalGameUI = () => {
-    const { isGameInviteOpen, closeGameInvite, inviteGame, inviteOptions } = useGame();
+    const { isGameInviteOpen, closeGameInvite, inviteToGame, inviteOptions } = useApp();
     const handleGameSelect = (type) => {
         if (inviteOptions.chatId) {
-            inviteGame(type, inviteOptions.chatId);
+            inviteToGame(inviteOptions.chatId, type);
         } else {
             console.error("Game initialization failed: Missing chat context");
             closeGameInvite();

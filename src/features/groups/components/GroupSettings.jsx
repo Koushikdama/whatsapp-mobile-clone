@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { 
     ArrowLeft, Users, Shield, Bell, BellOff, Image, LogOut, 
-    Trash2, Link as LinkIcon, Lock, Unlock, Settings 
+    Trash2, Link as LinkIcon, Lock, Unlock, Settings, History
 } from 'lucide-react';
 import { useApp } from '../../../shared/context/AppContext';
 import groupService from '../../../services/firebase/GroupService';
@@ -23,6 +23,7 @@ const GroupSettings = () => {
     const [isOwner, setIsOwner] = useState(false);
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState(null);
+    const [showHistoryToNewMembers, setShowHistoryToNewMembers] = useState(true);
     
     // UI feedback states
     const [showConfirm, setShowConfirm] = useState(null);
@@ -56,6 +57,9 @@ const GroupSettings = () => {
                 const ownerStatus = await groupService.isOwner(groupId, currentUser?.id);
                 setIsAdmin(adminStatus);
                 setIsOwner(ownerStatus);
+
+                // Load settings
+                setShowHistoryToNewMembers(groupChat.settings?.showHistoryToNewMembers ?? true);
             } else {
                 setError('Group not found');
             }
@@ -136,6 +140,34 @@ const GroupSettings = () => {
             loadGroupData(); // Reload to get updated mute status
         } catch (error) {
             setToast({ type: 'error', message: 'Error updating mute status' });
+        }
+    };
+
+    const handleHistoryToggle = async () => {
+        const newValue = !showHistoryToNewMembers;
+        setActionLoading(true);
+        try {
+            const result = await groupService.updateGroupSettings(groupId, {
+                showHistoryToNewMembers: newValue
+            });
+
+            if (result.success) {
+                setShowHistoryToNewMembers(newValue);
+                setToast({
+                    type: 'success',
+                    message: newValue
+                        ? 'New members can see all message history'
+                        : 'New members will only see messages after joining'
+                });
+                loadGroupData(); // Reload to get updated settings
+            } else {
+                setToast({ type: 'error', message: result.error || 'Failed to update setting' });
+            }
+        } catch (error) {
+            setToast({ type: 'error', message: 'Error updating setting' });
+            console.error('History toggle error:', error);
+        } finally {
+            setActionLoading(false);
         }
     };
 
@@ -269,6 +301,16 @@ const GroupSettings = () => {
                                 label={isMuted ? 'Notifications Muted' : 'Notifications Active'}
                                 onClick={handleMuteToggle}
                             />
+                            {isOwner && (
+                                <SettingsItem
+                                    icon={History}
+                                    label="Show History to New Members"
+                                    sublabel={showHistoryToNewMembers ? 'New members can see past messages' : 'New members only see messages after joining'}
+                                    onClick={handleHistoryToggle}
+                                    hasToggle={true}
+                                    toggleValue={showHistoryToNewMembers}
+                                />
+                            )}
                         </SettingsSection>
                     )}
 
@@ -338,7 +380,7 @@ const SettingsSection = ({ title, children }) => (
 /**
  * Settings Item Component - DRY principle
  */
-const SettingsItem = ({ icon: Icon, label, sublabel, onClick, danger, showArrow }) => (
+const SettingsItem = ({ icon: Icon, label, sublabel, onClick, danger, showArrow, hasToggle, toggleValue }) => (
     <button
         onClick={onClick}
         className="w-full flex items-center gap-4 px-4 py-3 hover:bg-gray-50 dark:hover:bg-wa-dark-hover transition-colors"
@@ -355,6 +397,17 @@ const SettingsItem = ({ icon: Icon, label, sublabel, onClick, danger, showArrow 
                 <span className="text-sm text-gray-500 dark:text-gray-400">{sublabel}</span>
             )}
         </div>
+        {hasToggle && (
+            <div
+                className={`relative inline-flex h-6 w-11 items-center rounded-full transition-colors ${toggleValue ? 'bg-wa-teal' : 'bg-gray-300 dark:bg-gray-600'
+                    }`}
+            >
+                <span
+                    className={`inline-block h-4 w-4 transform rounded-full bg-white transition-transform ${toggleValue ? 'translate-x-6' : 'translate-x-1'
+                        }`}
+                />
+            </div>
+        )}
         {showArrow && (
             <ArrowLeft size={20} className="text-gray-400 rotate-180" />
         )}

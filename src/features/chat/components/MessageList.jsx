@@ -130,6 +130,17 @@ const MessageList = ({
 
                         {!isDateLocked ? (
                             group.msgs.map((msg) => {
+                                // Render system messages (group creation, member additions, etc.)
+                                if (msg.senderId === 'system' || msg.type === 'system') {
+                                    return (
+                                        <div key={msg.id} className="flex justify-center mb-3">
+                                            <div className="bg-[#d6e9f2] dark:bg-[#182229] text-[#54656f] dark:text-[#8696a0] text-xs px-4 py-2 rounded-lg shadow-sm max-w-[80%] text-center">
+                                                {msg.content || msg.text || 'Group created'}
+                                            </div>
+                                        </div>
+                                    );
+                                }
+
                                 const isMe = msg.senderId === currentUser.id;
                                 const isActive = activeMessageId === msg.id;
                                 const isSelected = selectedMessages.has(msg.id);

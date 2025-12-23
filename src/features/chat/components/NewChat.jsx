@@ -80,10 +80,17 @@ const NewChat = () => {
         });
     };
 
-    const finalizeGroupCreation = () => {
+    const finalizeGroupCreation = async () => {
         if (!groupName.trim()) return;
-        const chatId = createGroup(groupName, Array.from(selectedParticipants));
-        navigate(`/chat/${chatId}`);
+        try {
+            const chatId = await createGroup(groupName, Array.from(selectedParticipants));
+            navigate(`/chat/${chatId}`);
+        } catch (error) {
+            console.error('Error finalizing group creation:', error);
+            // Still navigate even on error since we have fallback
+            const fallbackId = `c_g_${Date.now()}`;
+            navigate(`/chat/${fallbackId}`);
+        }
     };
 
     // --- Components ---

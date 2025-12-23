@@ -142,6 +142,19 @@ const NotificationItem = ({ notification, onActionTaken }) => {
                         </button>
                     )
                 };
+            case NOTIFICATION_TYPES.ADDED_TO_GROUP:
+                return {
+                    icon: '👥',
+                    message: `added you to the group "${notification.metadata?.groupName || 'a group'}"`,
+                    action: (
+                        <button
+                            onClick={() => navigate(`/chat/${notification.metadata?.groupId}`)}
+                            className="px-4 py-1.5 bg-wa-teal text-white rounded-lg text-sm font-medium hover:bg-wa-tealDark"
+                        >
+                            View Group
+                        </button>
+                    )
+                };
             default:
                 return {
                     icon: '📬',

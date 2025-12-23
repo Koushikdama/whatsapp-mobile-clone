@@ -6,7 +6,6 @@ import Signup from './src/features/auth/components/Signup';
 import VerifyOtp from './src/features/auth/components/VerifyOtp';
 
 import { AppProvider } from './src/shared/context/AppContext';
-import { GameProvider } from './src/features/games/context/GameContext';
 import { CallProvider } from './src/features/call/context/CallContext';
 
 import DesktopLayout from './src/core/layout/DesktopLayout';
@@ -32,25 +31,23 @@ const LayoutSelector = () => {
 const App = () => {
     return (
         <AppProvider>
-            <GameProvider>
-                <CallProvider>
-                    <HashRouter>
-                        <Routes>
-                            {/* Public Auth Routes */}
-                            <Route path="/login" element={<Login />} />
-                            <Route path="/signup" element={<Signup />} />
-                            <Route path="/verify-otp" element={<VerifyOtp />} />
+            <CallProvider>
+                <HashRouter>
+                    <Routes>
+                        {/* Public Auth Routes */}
+                        <Route path="/login" element={<Login />} />
+                        <Route path="/signup" element={<Signup />} />
+                        <Route path="/verify-otp" element={<VerifyOtp />} />
 
-                            {/* Protected Main Routes */}
-                            <Route path="/*" element={
-                                <ProtectedRoute>
-                                    <LayoutSelector />
-                                </ProtectedRoute>
-                            } />
-                        </Routes>
-                    </HashRouter>
-                </CallProvider>
-            </GameProvider>
+                        {/* Protected Main Routes */}
+                        <Route path="/*" element={
+                            <ProtectedRoute>
+                                <LayoutSelector />
+                            </ProtectedRoute>
+                        } />
+                    </Routes>
+                </HashRouter>
+            </CallProvider>
         </AppProvider>
     );
 };

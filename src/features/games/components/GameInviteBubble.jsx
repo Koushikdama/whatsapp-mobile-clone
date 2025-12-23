@@ -22,7 +22,8 @@ const GameInviteBubble = ({ message }) => {
     };
 
     const handleJoin = () => {
-        joinGame(gameType, roomId, message.chatId);
+        // Pass the full payload so joinGame can reconstruct the room if needed
+        joinGame(gameType, roomId, message.chatId, payload);
     };
 
     return (
@@ -59,17 +60,12 @@ const GameInviteBubble = ({ message }) => {
                 {status === 'pending' && (
                     <button
                         onClick={handleJoin}
-                        disabled={isMe && status === 'pending'} // Host waits? Or host can also join to enter waiting room?
-                        // Actually host should probably just enter. 
-                        // The prompt says: If status === "pending", show a "Join Game" button to the recipient and a "Waiting..." label to the sender.
-                        className={`w-full py-2 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 ${isMe
-                                ? 'bg-gray-100 text-gray-400 cursor-not-allowed dark:bg-gray-800 dark:text-gray-500'
-                                : 'bg-wa-teal text-white hover:bg-teal-600 shadow-md hover:shadow-lg active:scale-95'
-                            }`}
+                        className={`w-full py-2 rounded-lg font-bold text-sm transition-all flex items-center justify-center gap-2 bg-wa-teal text-white hover:bg-teal-600 shadow-md hover:shadow-lg active:scale-95`}
                     >
                         {isMe ? (
                             <>
-                                <span className="animate-pulse">Waiting...</span>
+                                <Play size={16} fill="currentColor" />
+                                Enter Game
                             </>
                         ) : (
                             <>

@@ -2,7 +2,6 @@ import React, { useState, useRef, useEffect, useCallback, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApp } from '../../../shared/context/AppContext';
 import { useCall } from '../../call/context/CallContext';
-import { useGame } from '../../games/context/GameContext';
 import { useWorkerMessageSearch } from '../../../shared/hooks/useWorkerSearch';
 
 export const useChatWindowController = () => {
@@ -15,10 +14,10 @@ export const useChatWindowController = () => {
         togglePinMessage, addReaction, currentUserId, chatSettings,
         toggleDateLock, securitySettings, drafts, setDraft, votePoll,
         setUserTyping, updateMessageStatus, markChatAsRead,
-        onlineUsers, typingUsers, lastSeen, markMessageAsViewed, editMessage
+        onlineUsers, typingUsers, lastSeen, markMessageAsViewed, editMessage,
+        openGameInvite
     } = useApp();
     const { startCall } = useCall();
-    const { openGameInvite } = useGame();
 
     // Local State (View State)
     const [inputText, setInputText] = useState('');

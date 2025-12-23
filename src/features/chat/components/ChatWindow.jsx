@@ -53,7 +53,7 @@ const mockTranslate = (text, lang) => {
 const ChatWindow = () => {
     const location = useLocation();
     const ctrl = useChatWindowController();
-    const { toggleStarMessage, deleteForMe, deleteForEveryone, canDeleteForEveryone, hiddenMessages, isFollowing } = useApp();
+    const { toggleStarMessage, deleteForMe, deleteForEveryone, canDeleteForEveryone, hiddenMessages, isFollowing, openGameInvite } = useApp();
     const fileInputRef = useRef(null);
     const [isDrawing, setIsDrawing] = useState(false);
     const [isPolling, setIsPolling] = useState(false);
@@ -257,7 +257,7 @@ const ChatWindow = () => {
                 alert('Geolocation is not supported by this browser.');
             }
         } else if (type === 'game') {
-            ctrl.openGameInvite({
+            openGameInvite({
                 isGroup: displayChat?.isGroup || false,
                 chatId: displayChat?.id,
                 opponentId: displayChat?.isGroup ? 'group' : displayChat?.contactId

@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import SettingsHeader from '../../../shared/components/settings/SettingsHeader';
-import PrivacyOptionSelector from '../../../shared/components/settings/PrivacyOptionSelector';
-import { useApp } from '../../../shared/context/AppContext';
+import SettingsHeader from '../../../../shared/components/settings/SettingsHeader';
+import PrivacyOptionSelector from '../../../../shared/components/settings/PrivacyOptionSelector';
+import { useApp } from '../../../../shared/context/AppContext';
 
 /**
  * About Privacy Settings

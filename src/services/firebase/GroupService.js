@@ -85,6 +85,45 @@ class GroupService extends FirebaseService {
     }
 
     /**
+     * Update group settings (e.g., showHistoryToNewMembers)
+     * @param {string} groupId - Group ID
+     * @param {object} settings - Settings object to update
+     * @returns {Promise<{success: boolean, error?: string}>}
+     */
+    async updateGroupSettings(groupId, settings) {
+        try {
+            if (!groupId) {
+                return { success: false, error: 'Group ID is required' };
+            }
+
+            const groupRef = doc(db, this.collectionName, groupId);
+
+            // Check if group exists
+            const groupDoc = await getDoc(groupRef);
+            if (!groupDoc.exists()) {
+                return { success: false, error: 'Group not found' };
+            }
+
+            // Build settings update object with nested field notation
+            const settingsUpdate = {};
+            Object.keys(settings).forEach(key => {
+                settingsUpdate[`settings.${key}`] = settings[key];
+            });
+
+            await updateDoc(groupRef, {
+                ...settingsUpdate,
+                updatedAt: serverTimestamp()
+            });
+
+            console.log(`✅ Group ${groupId} settings updated:`, settings);
+            return { success: true };
+        } catch (error) {
+            console.error('[GroupService] Update group settings error:', error);
+            throw handleFirebaseError(error);
+        }
+    }
+
+    /**
      * Add participant to group
      * @param {string} groupId - Group ID
      * @param {string} userId - User ID to add

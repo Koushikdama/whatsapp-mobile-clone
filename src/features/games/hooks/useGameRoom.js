@@ -1,10 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
-import { useGame } from '../context/GameContext';
 import { useApp } from '../../../shared/context/AppContext';
 
 export const useGameRoom = (roomId) => {
-    const { roomSession, activeGame } = useGame();
-    const { currentUserId } = useApp();
+    const { activeGames, currentUserId } = useApp();
 
     // Local state for the game (synced with roomSession in real app)
     const [gameState, setGameState] = useState({

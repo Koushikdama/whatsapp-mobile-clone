@@ -22,13 +22,14 @@ import {
 import FirebaseService, { handleFirebaseError } from './FirebaseService';
 
 /**
- * Notification types for follow-related activities
+ * Notification types for follow-related activities and groups
  */
 export const NOTIFICATION_TYPES = {
     FOLLOW_REQUEST: 'follow_request',      // Someone requested to follow (private account)
     FOLLOW_ACCEPTED: 'follow_accepted',    // Your follow request was accepted
     NEW_FOLLOWER: 'new_follower',          // Someone followed you (public account)
-    FOLLOW_BACK: 'follow_back'             // Someone followed you back (mutual)
+    FOLLOW_BACK: 'follow_back',            // Someone followed you back (mutual)
+    ADDED_TO_GROUP: 'added_to_group'       // Someone added you to a group
 };
 
 class NotificationFirebaseService extends FirebaseService {

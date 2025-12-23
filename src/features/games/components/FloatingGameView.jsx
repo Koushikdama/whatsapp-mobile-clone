@@ -1,7 +1,6 @@
 import React, { useRef, useMemo, useState, useEffect } from 'react';
 import { Minus, X, Minimize2, Maximize2, MessageCircle, Trophy, Dice5, Gamepad2, Eye } from 'lucide-react';
 import { motion, AnimatePresence, useDragControls } from 'framer-motion';
-import { useGame } from '../context/GameContext';
 import { useApp } from '../../../shared/context/AppContext';
 import useResponsive from '../../../shared/hooks/useResponsive';
 import GameFactory from './GameFactory';
@@ -10,8 +9,7 @@ import GameChatPanel from './chat/GameChatPanel';
 import { GAME_CONFIG } from '../../../shared/constants/gameConstants';
 
 const FloatingGameView = () => {
-    const { activeGame, closeGame, minimizeGame, maximizeGame } = useGame();
-    const { currentUserId, currentUser } = useApp();
+    const { activeGame, closeGame, minimizeGame, maximizeGame, currentUserId, currentUser } = useApp();
     const dragControls = useDragControls();
     const { width, height, isMobile, isTablet, isDesktop, isPortrait, isLandscape, isMobileSmall } = useResponsive();
     const [spectatorMode, setSpectatorMode] = useState(false);
