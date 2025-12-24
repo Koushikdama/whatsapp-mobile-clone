@@ -4,8 +4,10 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no" />
-  <link rel="icon" type="image/x-icon" href="/whatsapp-mobile-clone/favicon.ico">
-  <title>WhatsApp Clone</title>
+  <title>Aura</title>
+  <!-- Tailwind CDN for development only -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <style>
     :root {
       --wa-teal: #008069;
       --wa-teal-dark: #075E54;
@@ -162,7 +164,87 @@
     }
 
     /* Smooth transitions for responsive changes */
+    .transition-responsive {
+      transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+    }
+  </style>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          screens: {
+            'xs': '375px',    // Small phones
+            'sm': '640px',    // Large phones
+            'md': '768px',    // Tablets
+            'lg': '1024px',   // Desktops
+            'xl': '1280px',   // Large desktops
+            '2xl': '1536px',  // Extra large desktops
+          },
+          colors: {
+            wa: {
+              teal: 'var(--wa-teal)',
+              tealDark: 'var(--wa-teal-dark)',
+              lightGreen: 'var(--wa-light-green)',
+              blue: '#34B7F1',
+              bg: '#EFEAE2',
+              chatOutgoing: 'var(--wa-bubble-out)',
+              chatIncoming: 'var(--wa-bubble-in)',
+              gray: '#8696a0',
+              grayBg: '#F0F2F5',
+              border: '#e9edef',
+              // Dark mode palette
+              dark: {
+                bg: '#111b21',
+                paper: '#202c33',
+                header: '#202c33',
+                border: '#222d36',
+                chatOutgoing: 'var(--wa-bubble-out)', // Dynamic mapping for dark mode too
+                chatIncoming: 'var(--wa-bubble-in)',
+                hover: '#2a3942',
+                input: '#2a3942'
+              }
+            }
+          },
+          fontFamily: {
+            sans: ['-apple-system', 'BlinkMacSystemFont', '"Segoe UI"', 'Roboto', 'Helvetica', 'Arial', 'sans-serif'],
+          },
+          spacing: {
+            '18': '4.5rem',
+            '22': '5.5rem',
+          }
         }
       }
     }
   </script>
+
+
+  <script type="importmap">
+{
+  "imports": {
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.10.1",
+    "lucide-react": "https://esm.sh/lucide-react@^0.561.0",
+    "axios": "https://esm.sh/axios@1.6.2",
+    "chess.js": "https://esm.sh/chess.js@1.0.0-beta.7",
+    "lottie-react": "https://esm.sh/lottie-react@2.4.0",
+    "react-dom": "https://esm.sh/react-dom@^19.2.3"
+  }
+}
+</script>
+  <script type="module" crossorigin src="/whatsapp-mobile-clone/assets/index-7VfhOhEA.js"></script>
+  <link rel="modulepreload" crossorigin href="/whatsapp-mobile-clone/assets/react-vendor-Dp0kJvEn.js">
+  <link rel="modulepreload" crossorigin href="/whatsapp-mobile-clone/assets/router-BlRKbG7o.js">
+  <link rel="modulepreload" crossorigin href="/whatsapp-mobile-clone/assets/icons-FsuYV2CB.js">
+  <link rel="modulepreload" crossorigin href="/whatsapp-mobile-clone/assets/lottie-BmTBBIiw.js">
+  <link rel="modulepreload" crossorigin href="/whatsapp-mobile-clone/assets/chess-Bi0BiJQc.js">
+  <link rel="stylesheet" crossorigin href="/whatsapp-mobile-clone/assets/index-CncLY5ce.css">
+</head>
+
+<body class="bg-gray-200 dark:bg-wa-dark-bg">
+  <div id="root"></div>
+</body>
+
+</html>
