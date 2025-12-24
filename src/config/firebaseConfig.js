@@ -9,16 +9,17 @@ import { getStorage, connectStorageEmulator } from 'firebase/storage';
 import { getMessaging, isSupported } from 'firebase/messaging';
 
 // Your web app's Firebase configuration
-// For Firebase JS SDK v7.20.0 and later, measurementId is optional
+// Note: Firebase API keys are safe to include in client-side code
+// Security is enforced through Firebase Security Rules (see firestore.rules and database.rules.json)
 const firebaseConfig = {
-    apiKey: import.meta.env.VITE_FIREBASE_API_KEY,
-    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN,
-    databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL,
-    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID,
-    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET,
-    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID,
-    appId: import.meta.env.VITE_FIREBASE_APP_ID,
-    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID
+    apiKey: import.meta.env.VITE_FIREBASE_API_KEY || "AIzaSyDQjvWVnK8Mv00F4Z7atVkaARlOmA4dJgY",
+    authDomain: import.meta.env.VITE_FIREBASE_AUTH_DOMAIN || "frontend-40733.firebaseapp.com",
+    databaseURL: import.meta.env.VITE_FIREBASE_DATABASE_URL || "https://frontend-40733-default-rtdb.firebaseio.com",
+    projectId: import.meta.env.VITE_FIREBASE_PROJECT_ID || "frontend-40733",
+    storageBucket: import.meta.env.VITE_FIREBASE_STORAGE_BUCKET || "frontend-40733.firebasestorage.app",
+    messagingSenderId: import.meta.env.VITE_FIREBASE_MESSAGING_SENDER_ID || "191364639424",
+    appId: import.meta.env.VITE_FIREBASE_APP_ID || "1:191364639424:web:e260794329d28a4f009b25",
+    measurementId: import.meta.env.VITE_FIREBASE_MEASUREMENT_ID || "G-04P8GMX5HV"
 };
 
 // Initialize Firebase
