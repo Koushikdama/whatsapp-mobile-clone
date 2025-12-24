@@ -21,11 +21,25 @@ import {
     writeBatch
 } from 'firebase/firestore';
 import FirebaseService, { handleFirebaseError } from './FirebaseService';
+import { NOTIFICATION_TYPES } from './NotificationFirebaseService';
 
 class GroupService extends FirebaseService {
     constructor() {
         super();
         this.collectionName = 'groups';
+        this.unifiedNotificationService = null;
+    }
+
+    /**
+     * Lazy load unified notification service to avoid circular dependencies
+     * @private
+     */
+    async getNotificationService() {
+        if (!this.unifiedNotificationService) {
+            const module = await import('../UnifiedNotificationService');
+            this.unifiedNotificationService = module.default;
+        }
+        return this.unifiedNotificationService;
     }
 
     /**
@@ -147,6 +161,23 @@ class GroupService extends FirebaseService {
                 participants: arrayUnion(userId),
                 updatedAt: serverTimestamp()
             });
+
+            // Send notification to the added user
+            try {
+                const notificationService = await this.getNotificationService();
+                const addedBy = groupDoc.data().owner || 'admin';
+                await notificationService.sendNotification(
+                    userId,
+                    addedBy,
+                    NOTIFICATION_TYPES.ADDED_TO_GROUP,
+                    {
+                        groupId,
+                        groupName: groupDoc.data().name || 'a group'
+                    }
+                );
+            } catch (notifError) {
+                console.warn('⚠️ Failed to send notification:', notifError);
+            }
 
             console.log(`✅ User ${userId} added to group ${groupId}`);
             return { success: true };

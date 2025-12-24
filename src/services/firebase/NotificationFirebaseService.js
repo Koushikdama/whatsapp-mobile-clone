@@ -29,7 +29,10 @@ export const NOTIFICATION_TYPES = {
     FOLLOW_ACCEPTED: 'follow_accepted',    // Your follow request was accepted
     NEW_FOLLOWER: 'new_follower',          // Someone followed you (public account)
     FOLLOW_BACK: 'follow_back',            // Someone followed you back (mutual)
-    ADDED_TO_GROUP: 'added_to_group'       // Someone added you to a group
+    ADDED_TO_GROUP: 'added_to_group',      // Someone added you to a group
+    INCOMING_CALL: 'incoming_call',        // Receiving a call
+    MISSED_CALL: 'missed_call',            // Missed a call
+    CALL_DECLINED: 'call_declined'         // Call was declined
 };
 
 class NotificationFirebaseService extends FirebaseService {

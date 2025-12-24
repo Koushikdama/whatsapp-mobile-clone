@@ -114,6 +114,22 @@ service cloud.firestore {
       allow update: if isAuthenticated();
     }
     
+    
+    // Group Invite Links collection
+    match /groupInviteLinks/{linkId} {
+      // Read: Any authenticated user can read invite links (needed to validate and join groups)
+      allow read: if isAuthenticated();
+      
+      // Create: Any authenticated user can create invite links
+      allow create: if isAuthenticated();
+      
+      // Update: Any authenticated user can update (to deactivate or increment usage)
+      allow update: if isAuthenticated();
+      
+      // Delete: Prevent deletion (links should be deactivated, not deleted)
+      allow delete: if false;
+    }
+    
     // Notifications collection
     match /notifications/{notificationId} {
       // Read: Users can only read their own notifications

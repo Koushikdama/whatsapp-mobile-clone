@@ -2,11 +2,12 @@
 import React, { useState, useRef, useEffect, useCallback } from 'react';
 import { createPortal } from 'react-dom';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ArrowLeft, User as UserIcon, Bell, Lock, Search, MoreVertical, Star, ThumbsUp, Trash2, LogOut, Pin, Palette, Check, Grid, Image as ImageIcon, Video as VideoIcon, FileText, BarChart2, ChevronRight, Download, Shield, EyeOff, ChevronDown, Unlock, CircleDashed, Plus, Settings, Ban, UserPlus, QrCode, X, Archive, History } from 'lucide-react';
+import { ArrowLeft, User as UserIcon, Bell, Lock, Search, MoreVertical, Star, ThumbsUp, Trash2, LogOut, Pin, Palette, Check, Grid, Image as ImageIcon, Video as VideoIcon, FileText, BarChart2, ChevronRight, Download, Shield, EyeOff, ChevronDown, Unlock, CircleDashed, Plus, Settings, Ban, UserPlus, QrCode, X, Archive, History, Link, Copy, Share2, RefreshCw } from 'lucide-react';
 import { useApp } from '../../../shared/context/AppContext';
 import { formatTimestamp } from '../../../shared/utils/formatTime';
 import StatusViewer from '../../status/components/StatusViewer';
 import EditButton from '../../../shared/components/ui/EditButton';
+import groupInviteLinkService from '../../../services/GroupInviteLinkService';
 
 const THEME_COLORS = [
     { name: 'Default', value: '' },
@@ -69,6 +70,12 @@ const GroupInfo = () => {
     const [showEditDescription, setShowEditDescription] = useState(false);
     const [editGroupName, setEditGroupName] = useState('');
     const [editGroupDescription, setEditGroupDescription] = useState('');
+
+    // Invite Link State
+    const [showInviteLink, setShowInviteLink] = useState(false);
+    const [inviteLink, setInviteLink] = useState('');
+    const [loadingInviteLink, setLoadingInviteLink] = useState(false);
+    const [copySuccess, setCopySuccess] = useState(false);
 
     const chat = chats.find(c => c.id === chatId);
 
@@ -326,6 +333,72 @@ const GroupInfo = () => {
         const result = await updateGroupInfo(chatId, { groupDescription: trimmedDesc });
         if (result.success) {
             setShowEditDescription(false);
+        }
+    };
+
+    // --- INVITE LINK HANDLERS ---
+    const handleOpenInviteLink = async () => {
+        setShowInviteLink(true);
+        setLoadingInviteLink(true);
+        setCopySuccess(false);
+
+        try {
+            // Try to get existing link
+            let link = await groupInviteLinkService.getGroupInviteLink(chatId);
+
+            // If no link exists, generate a new one
+            if (!link) {
+                link = await groupInviteLinkService.generateInviteLink(chatId, currentUserId);
+            }
+
+            setInviteLink(link);
+        } catch (error) {
+            console.error('Failed to get invite link:', error);
+        } finally {
+            setLoadingInviteLink(false);
+        }
+    };
+
+    const handleCopyLink = async () => {
+        try {
+            await navigator.clipboard.writeText(inviteLink);
+            setCopySuccess(true);
+            setTimeout(() => setCopySuccess(false), 2000);
+        } catch (error) {
+            console.error('Failed to copy link:', error);
+        }
+    };
+
+    const handleResetLink = async () => {
+        setLoadingInviteLink(true);
+        try {
+            const newLink = await groupInviteLinkService.resetInviteLink(chatId, currentUserId);
+            setInviteLink(newLink);
+            setCopySuccess(false);
+        } catch (error) {
+            console.error('Failed to reset link:', error);
+        } finally {
+            setLoadingInviteLink(false);
+        }
+    };
+
+    const handleShareLink = async () => {
+        if (navigator.share) {
+            try {
+                await navigator.share({
+                    title: `Join ${chat.groupName}`,
+                    text: `Join our group "${chat.groupName}" on WhatsApp`,
+                    url: inviteLink
+                });
+            } catch (error) {
+                // User cancelled or error occurred
+                if (error.name !== 'AbortError') {
+                    console.error('Error sharing:', error);
+                }
+            }
+        } else {
+            // Fallback to copy
+            handleCopyLink();
         }
     };
 
@@ -788,17 +861,24 @@ const GroupInfo = () => {
                                 <div className="flex-1">
                                     <h3 className="text-base text-[#111b21] dark:text-gray-100 mb-1">Show History to New Members</h3>
                                     <p className="text-xs text-[#667781] dark:text-gray-500">
-                                        {chat.settings?.showHistoryToNewMembers !== false
+                                        {chat.groupSettings?.showHistoryToNewMembers !== false
                                             ? 'New members can see all past messages'
                                             : 'New members only see messages after joining'}
                                     </p>
                                 </div>
                             </div>
                             <div
-                                onClick={() => updateGroupSettings(chat.id, { showHistoryToNewMembers: !(chat.settings?.showHistoryToNewMembers !== false) })}
-                                className={`w-10 h-6 rounded-full p-1 transition-colors cursor-pointer shrink-0 ${(chat.settings?.showHistoryToNewMembers !== false) ? 'bg-wa-teal' : 'bg-gray-300 dark:bg-gray-600'}`}
+                                onClick={() => {
+                                    if (isOwner) {
+                                        updateGroupSettings(chat.id, {
+                                            showHistoryToNewMembers: !(chat.groupSettings?.showHistoryToNewMembers !== false)
+                                        });
+                                    }
+                                }}
+                                className={`w-10 h-6 rounded-full p-1 transition-colors shrink-0 ${isOwner ? 'cursor-pointer' : 'cursor-not-allowed opacity-50'
+                                    } ${(chat.groupSettings?.showHistoryToNewMembers !== false) ? 'bg-wa-teal' : 'bg-gray-300 dark:bg-gray-600'}`}
                             >
-                                <div className={`bg-white w-4 h-4 rounded-full shadow-sm transition-transform ${(chat.settings?.showHistoryToNewMembers !== false) ? 'translate-x-4' : ''}`}></div>
+                                <div className={`bg-white w-4 h-4 rounded-full shadow-sm transition-transform ${(chat.groupSettings?.showHistoryToNewMembers !== false) ? 'translate-x-4' : ''}`}></div>
                             </div>
                         </div>
                     )}
@@ -935,6 +1015,81 @@ const GroupInfo = () => {
                                 Unlock
                             </button>
                         </div>
+                    </div>
+                </div>,
+                document.body
+            )}
+
+            {/* INVITE LINK MODAL */}
+            {showInviteLink && createPortal(
+                <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/50 backdrop-blur-sm p-4 animate-in fade-in duration-200" onClick={() => setShowInviteLink(false)}>
+                    <div className="bg-white dark:bg-wa-dark-paper rounded-lg shadow-xl w-full max-w-md p-6" onClick={(e) => e.stopPropagation()}>
+                        {/* Header */}
+                        <div className="flex items-center justify-between mb-4">
+                            <h3 className="text-lg font-medium text-[#111b21] dark:text-gray-100">Group Invite Link</h3>
+                            <button onClick={() => setShowInviteLink(false)} className="p-1 hover:bg-gray-100 dark:hover:bg-wa-dark-hover rounded-full transition-colors">
+                                <X size={20} className="text-gray-600 dark:text-gray-400" />
+                            </button>
+                        </div>
+
+                        {loadingInviteLink ? (
+                            <div className="flex items-center justify-center py-12">
+                                <div className="w-12 h-12 border-4 border-wa-teal border-t-transparent rounded-full animate-spin"></div>
+                            </div>
+                        ) : (
+                            <>
+                                {/* QR Code */}
+                                <div className="flex justify-center mb-4">
+                                    <div className="p-3 bg-white rounded-lg border-2 border-gray-200 dark:border-gray-700">
+                                        <img
+                                            src={`https://api.qrserver.com/v1/create-qr-code/?size=200x200&data=${encodeURIComponent(inviteLink)}`}
+                                            alt="QR Code"
+                                            className="w-48 h-48"
+                                        />
+                                    </div>
+                                </div>
+
+                                {/* Link Display */}
+                                <div className="bg-gray-50 dark:bg-wa-dark-bg rounded-lg p-3 mb-4 flex items-center gap-2">
+                                    <input
+                                        type="text"
+                                        value={inviteLink}
+                                        readOnly
+                                        className="flex-1 bg-transparent text-sm text-[#111b21] dark:text-gray-100 outline-none truncate"
+                                    />
+                                    <button
+                                        onClick={handleCopyLink}
+                                        className="px-4 py-1.5 bg-wa-teal text-white rounded-lg text-sm hover:bg-wa-tealDark transition-colors flex items-center gap-1.5"
+                                    >
+                                        <Copy size={16} />
+                                        {copySuccess ? 'Copied!' : 'Copy'}
+                                    </button>
+                                </div>
+
+                                <p className="text-xs text-gray-500 dark:text-gray-400 mb-4 text-center">
+                                    Anyone with this link can join this group
+                                </p>
+
+                                {/* Actions */}
+                                <div className="flex gap-3">
+                                    <button
+                                        onClick={handleResetLink}
+                                        className="flex-1 py-2.5 text-red-500 border border-red-200 dark:border-red-900/30 rounded-lg hover:bg-red-50 dark:hover:bg-red-900/10 transition-colors flex items-center justify-center gap-2"
+                                        disabled={loadingInviteLink}
+                                    >
+                                        <RefreshCw size={18} />
+                                        Reset Link
+                                    </button>
+                                    <button
+                                        onClick={handleShareLink}
+                                        className="flex-1 py-2.5 bg-wa-teal text-white rounded-lg hover:bg-wa-tealDark transition-colors flex items-center justify-center gap-2"
+                                    >
+                                        <Share2 size={18} />
+                                        Share Link
+                                    </button>
+                                </div>
+                            </>
+                        )}
                     </div>
                 </div>,
                 document.body
@@ -1256,8 +1411,14 @@ const GroupInfo = () => {
                                         <div className="flex-1">
                                             <h3 className="text-base text-[#111b21] dark:text-gray-100">Add participants</h3>
                                         </div>
+                                        <div className="text-gray-400 hover:text-wa-teal cursor-pointer" onClick={(e) => { e.stopPropagation(); handleOpenInviteLink(); }}>
+                                            <Link size={20} />
+                                        </div>
                                     </div>
                                 )}
+
+
+
 
                                 {chat.groupParticipants?.map(pid => {
                                     const user = users[pid] || (pid === currentUserId ? currentUser : null);

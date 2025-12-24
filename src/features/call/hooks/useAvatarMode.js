@@ -1,6 +1,7 @@
 
 import { useState, useRef, useEffect, useCallback } from 'react';
 import { FaceMesh } from '@mediapipe/face_mesh';
+import storage from '../../../shared/utils/storage';
 
 export const useAvatarMode = () => {
     const [isAvatarMode, setIsAvatarMode] = useState(false);
@@ -66,14 +67,10 @@ export const useAvatarMode = () => {
     }, []);
 
     const drawAvatar = (ctx, landmarks, width, height) => {
-        // Simple geometric avatar
-        // Landmarks: 
-        // 133, 33, 160, 158, 136, 153, 144, 145, 153... (Left Eye)
-        // 362, 263, 387, 385, 365, 380, 373, 374, 380... (Right Eye)
-        // 13, 14 (Lips center, vertical)
+        // Enhanced avatar rendering with expression detection
 
-        // Colors
-        const skinColor = '#FFD700'; // Gold/Yellow
+        // Colors - can be customized based on user settings
+        const skinColor = storage.local.get('avatar_skin_color', '#FFD700'); // Gold/Yellow
         const eyeColor = 'white';
         const pupilColor = 'black';
 
@@ -83,30 +80,49 @@ export const useAvatarMode = () => {
         const cy = nose.y * height;
         const scale = 1.5; // Scale face up a bit
 
+        // Detect expressions
+        const expressions = detectExpressions(landmarks);
+
         // Draw Head (Circle)
         ctx.beginPath();
         ctx.arc(cx, cy, 100 * scale, 0, 2 * Math.PI);
         ctx.fillStyle = skinColor;
         ctx.fill();
+        ctx.strokeStyle = '#DAA520';
+        ctx.lineWidth = 3;
+        ctx.stroke();
 
-        // Draw Left Eye
-        const leftEye = landmarks[159]; // Top of left eye
-        const leftEyeBottom = landmarks[145]; // Bottom of left eye
+        // Draw Eyes based on expression
+        const leftEye = landmarks[159];
+        const leftEyeBottom = landmarks[145];
         const leftEyeHeight = Math.abs(leftEye.y - leftEyeBottom.y);
         const isLeftBlink = leftEyeHeight < 0.01;
 
-        ctx.beginPath();
+        const rightEye = landmarks[386];
+        const rightEyeBottom = landmarks[374];
+        const rightEyeHeight = Math.abs(rightEye.y - rightEyeBottom.y);
+        const isRightBlink = rightEyeHeight < 0.01;
+
+        // Draw Left Eye
         if (isLeftBlink) {
+            ctx.beginPath();
             ctx.moveTo(landmarks[33].x * width, landmarks[33].y * height);
             ctx.lineTo(landmarks[133].x * width, landmarks[133].y * height);
             ctx.strokeStyle = 'black';
             ctx.lineWidth = 3;
             ctx.stroke();
         } else {
+            // Eye shape changes based on expression
+            const eyeScale = expressions.surprised ? 1.3 : 1.0;
+            ctx.beginPath();
             ctx.ellipse(landmarks[159].x * width, landmarks[159].y * height + 10,
-                15 * scale, 10 * (isLeftBlink ? 0.1 : 1) * scale, 0, 0, 2 * Math.PI);
+                15 * scale * eyeScale, 10 * scale * eyeScale, 0, 0, 2 * Math.PI);
             ctx.fillStyle = eyeColor;
             ctx.fill();
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
             // Pupil
             ctx.beginPath();
             ctx.arc(landmarks[159].x * width, landmarks[159].y * height + 10, 5 * scale, 0, 2 * Math.PI);
@@ -115,23 +131,24 @@ export const useAvatarMode = () => {
         }
 
         // Draw Right Eye
-        const rightEye = landmarks[386]; // Top
-        const rightEyeBottom = landmarks[374]; // Bottom
-        const rightEyeHeight = Math.abs(rightEye.y - rightEyeBottom.y);
-        const isRightBlink = rightEyeHeight < 0.01;
-
-        ctx.beginPath();
         if (isRightBlink) {
+            ctx.beginPath();
             ctx.moveTo(landmarks[362].x * width, landmarks[362].y * height);
             ctx.lineTo(landmarks[263].x * width, landmarks[263].y * height);
             ctx.strokeStyle = 'black';
             ctx.lineWidth = 3;
             ctx.stroke();
         } else {
+            const eyeScale = expressions.surprised ? 1.3 : 1.0;
+            ctx.beginPath();
             ctx.ellipse(landmarks[386].x * width, landmarks[386].y * height + 10,
-                15 * scale, 10 * (isRightBlink ? 0.1 : 1) * scale, 0, 0, 2 * Math.PI);
+                15 * scale * eyeScale, 10 * scale * eyeScale, 0, 0, 2 * Math.PI);
             ctx.fillStyle = eyeColor;
             ctx.fill();
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 2;
+            ctx.stroke();
+
             // Pupil
             ctx.beginPath();
             ctx.arc(landmarks[386].x * width, landmarks[386].y * height + 10, 5 * scale, 0, 2 * Math.PI);
@@ -139,26 +156,96 @@ export const useAvatarMode = () => {
             ctx.fill();
         }
 
-        // Draw Mouth
-        // Simple line from 78 to 308 (corners of mouth)
-        // Check 13 and 14 destance for openness
+        // Draw Mouth based on expression
         const mouthTop = landmarks[13];
         const mouthBottom = landmarks[14];
         const mouthOpen = Math.abs(mouthTop.y - mouthBottom.y);
 
         ctx.beginPath();
         if (mouthOpen > 0.02) {
+            // Open mouth (talking/surprised)
             ctx.ellipse((landmarks[13].x + landmarks[14].x) / 2 * width, (landmarks[13].y + landmarks[14].y) / 2 * height,
                 20 * scale, 15 * scale * (mouthOpen * 10), 0, 0, 2 * Math.PI);
             ctx.fillStyle = '#333';
             ctx.fill();
-        } else {
+        } else if (expressions.smiling) {
+            // Smiling mouth (curved up)
             ctx.moveTo(landmarks[78].x * width, landmarks[78].y * height);
-            ctx.quadraticCurveTo(landmarks[13].x * width, landmarks[13].y * height + 10, landmarks[308].x * width, landmarks[308].y * height);
+            ctx.quadraticCurveTo(
+                landmarks[13].x * width, landmarks[13].y * height - 5,
+                landmarks[308].x * width, landmarks[308].y * height
+            );
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        } else if (expressions.sad) {
+            // Sad mouth (curved down)
+            ctx.moveTo(landmarks[78].x * width, landmarks[78].y * height);
+            ctx.quadraticCurveTo(
+                landmarks[13].x * width, landmarks[13].y * height + 5,
+                landmarks[308].x * width, landmarks[308].y * height
+            );
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+        } else {
+            // Neutral mouth
+            ctx.moveTo(landmarks[78].x * width, landmarks[78].y * height);
+            ctx.lineTo(landmarks[308].x * width, landmarks[308].y * height);
             ctx.strokeStyle = 'black';
             ctx.lineWidth = 3;
             ctx.stroke();
         }
+
+        // Draw eyebrows based on expression
+        if (expressions.surprised) {
+            // Raised eyebrows
+            ctx.beginPath();
+            ctx.moveTo(landmarks[70].x * width, landmarks[70].y * height - 10);
+            ctx.lineTo(landmarks[63].x * width, landmarks[63].y * height - 10);
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(landmarks[300].x * width, landmarks[300].y * height - 10);
+            ctx.lineTo(landmarks[293].x * width, landmarks[293].y * height - 10);
+            ctx.stroke();
+        } else if (expressions.sad) {
+            // Sad eyebrows (angled down)
+            ctx.beginPath();
+            ctx.moveTo(landmarks[70].x * width, landmarks[70].y * height - 5);
+            ctx.lineTo(landmarks[63].x * width, landmarks[63].y * height);
+            ctx.strokeStyle = 'black';
+            ctx.lineWidth = 3;
+            ctx.stroke();
+
+            ctx.beginPath();
+            ctx.moveTo(landmarks[300].x * width, landmarks[300].y * height - 5);
+            ctx.lineTo(landmarks[293].x * width, landmarks[293].y * height);
+            ctx.stroke();
+        }
+    };
+
+    // New function to detect expressions from landmarks
+    const detectExpressions = (landmarks) => {
+        // Detect smile - mouth corners raised
+        const mouthLeft = landmarks[61];
+        const mouthRight = landmarks[291];
+        const mouthCenter = landmarks[13];
+        const smileIntensity = ((mouthLeft.y + mouthRight.y) / 2 - mouthCenter.y) * 100;
+        const smiling = smileIntensity < -0.5;
+
+        // Detect surprise - eyes wide, mouth open
+        const leftEyeTop = landmarks[159];
+        const leftEyeBottom = landmarks[145];
+        const eyeOpenness = Math.abs(leftEyeTop.y - leftEyeBottom.y);
+        const surprised = eyeOpenness > 0.025;
+
+        // Detect sadness - mouth corners lowered
+        const sad = smileIntensity > 0.5;
+
+        return { smiling, surprised, sad };
     };
 
     const drawIdleAvatar = (ctx, width, height) => {
@@ -194,7 +281,13 @@ export const useAvatarMode = () => {
                 console.error("FaceMesh Error", e);
             }
         }
-        animationFrameRef.current = requestAnimationFrame(processVideo);
+
+        // Optimize: Skip 2 frames for better performance (process every 3rd frame)
+        animationFrameRef.current = requestAnimationFrame(() => {
+            requestAnimationFrame(() => {
+                requestAnimationFrame(processVideo);
+            });
+        });
     };
 
     const startAvatarMode = async () => {

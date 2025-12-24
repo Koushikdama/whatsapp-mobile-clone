@@ -118,9 +118,13 @@ class ChatFirebaseService extends FirebaseService {
 
             // Send notifications to all participants (except the creator)
             console.log(`📬 Sending notifications to ${participantIds.length} members...`);
+
+            // Use unified notification service for better delivery
+            const unifiedNotificationService = (await import('../UnifiedNotificationService')).default;
+
             const notificationPromises = participantIds.map(async (participantId) => {
                 try {
-                    await notificationFirebaseService.createNotification(
+                    await unifiedNotificationService.sendNotification(
                         participantId,                      // Receiver
                         userId,                             // Creator (actor)
                         NOTIFICATION_TYPES.ADDED_TO_GROUP,

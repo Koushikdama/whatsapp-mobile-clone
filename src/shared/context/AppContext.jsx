@@ -377,6 +377,13 @@ export const AppProvider = ({ children }) => {
               }
             }));
 
+            // 🐛 DEBUG: Log theme colors from initial load
+            transformedChats.forEach(chat => {
+              if (chat.userSettings?.themeColor || chat.userSettings?.incomingThemeColor) {
+                console.log(`🎨 [Initial Load] Chat ${chat.id}: outgoing=${chat.userSettings.themeColor}, incoming=${chat.userSettings.incomingThemeColor}`);
+              }
+            });
+
             // Set Firebase chats as the only source of truth
             setChats(transformedChats);
             console.log(`✅ Set ${transformedChats.length} chats from Firebase`);
@@ -385,6 +392,18 @@ export const AppProvider = ({ children }) => {
             console.log('🔔 Setting up real-time chat listener...');
             chatFirebaseService.subscribeToUserChats(user.uid, (updatedChats) => {
               console.log('📡 Real-time update received:', updatedChats.length, 'chats');
+
+              // 🐛 DEBUG: Log what Firebase returned
+              updatedChats.forEach(chat => {
+                if (chat.userSettings) {
+                  console.log(`🔍 [Firebase Raw] Chat ${chat.id}: userSettings exists`, {
+                    themeColor: chat.userSettings.themeColor,
+                    incomingThemeColor: chat.userSettings.incomingThemeColor
+                  });
+                } else {
+                  console.warn(`⚠️ [Firebase Raw] Chat ${chat.id}: NO userSettings!`);
+                }
+              });
 
               const transformedUpdates = updatedChats.map(chat => ({
                 id: chat.id,
@@ -416,8 +435,37 @@ export const AppProvider = ({ children }) => {
                 }
               }));
 
-              setChats(transformedUpdates);
-              console.log('✅ Real-time sync: Updated chats');
+              // 🐛 DEBUG: Log transformed data
+              transformedUpdates.forEach(chat => {
+                if (chat.userSettings?.themeColor || chat.userSettings?.incomingThemeColor) {
+                  console.log(`🎨 [Transformed] Chat ${chat.id}: outgoing=${chat.userSettings.themeColor}, incoming=${chat.userSettings.incomingThemeColor}`);
+                }
+              });
+
+              setChats(prevChats => {
+                // 🔧 FIX: Merge with existing state to preserve optimistic updates
+                const chatMap = new Map(prevChats.map(c => [c.id, c]));
+
+                transformedUpdates.forEach(update => {
+                  const existing = chatMap.get(update.id);
+                  if (existing && existing.userSettings) {
+                    // Merge: Preserve theme colors from optimistic update if they exist
+                    chatMap.set(update.id, {
+                      ...update,
+                      userSettings: {
+                        ...update.userSettings,
+                        themeColor: update.userSettings.themeColor !== null ? update.userSettings.themeColor : existing.userSettings.themeColor,
+                        incomingThemeColor: update.userSettings.incomingThemeColor !== null ? update.userSettings.incomingThemeColor : existing.userSettings.incomingThemeColor
+                      }
+                    });
+                  } else {
+                    chatMap.set(update.id, update);
+                  }
+                });
+
+                return Array.from(chatMap.values());
+              });
+              console.log('✅ Real-time sync: Updated chats with merge');
             });
           } else {
             console.log('⚠️ No chats found in Firebase');

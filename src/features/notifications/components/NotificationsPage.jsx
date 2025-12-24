@@ -49,6 +49,7 @@ const NotificationItem = ({ notification, onActionTaken }) => {
                                 onClick={async () => {
                                     setLoading(true);
                                     try {
+                                        await notificationFirebaseService.markAsRead(notification.id);
                                         await acceptRequest(notification.actorId);
                                         onActionTaken?.();
                                     } finally {
@@ -64,6 +65,7 @@ const NotificationItem = ({ notification, onActionTaken }) => {
                                 onClick={async () => {
                                     setLoading(true);
                                     try {
+                                        await notificationFirebaseService.markAsRead(notification.id);
                                         await rejectRequest(notification.actorId);
                                         onActionTaken?.();
                                     } finally {
@@ -84,7 +86,10 @@ const NotificationItem = ({ notification, onActionTaken }) => {
                     message: `accepted your follow request`,
                     action: (
                         <button
-                            onClick={() => navigate(`/profile/${actor.id}`)}
+                            onClick={async () => {
+                                await notificationFirebaseService.markAsRead(notification.id);
+                                navigate(`/profile/${actor.id}`);
+                            }}
                             className="px-4 py-1.5 bg-gray-200 dark:bg-wa-dark-hover text-gray-700 dark:text-gray-300 rounded-lg text-sm font-medium hover:bg-gray-300 dark:hover:bg-wa-dark-border"
                         >
                             View Profile
@@ -100,6 +105,7 @@ const NotificationItem = ({ notification, onActionTaken }) => {
                             onClick={async () => {
                                 setLoading(true);
                                 try {
+                                    await notificationFirebaseService.markAsRead(notification.id);
                                     await unfollowUser(actor.id);
                                     onActionTaken?.();
                                 } finally {
@@ -116,6 +122,7 @@ const NotificationItem = ({ notification, onActionTaken }) => {
                             onClick={async () => {
                                 setLoading(true);
                                 try {
+                                    await notificationFirebaseService.markAsRead(notification.id);
                                     await followUser(actor.id);
                                     onActionTaken?.();
                                 } finally {
@@ -135,7 +142,10 @@ const NotificationItem = ({ notification, onActionTaken }) => {
                     message: `followed you back`,
                     action: (
                         <button
-                            onClick={() => navigate(`/chat/${actor.id}`)}
+                            onClick={async () => {
+                                await notificationFirebaseService.markAsRead(notification.id);
+                                navigate(`/chat/${actor.id}`);
+                            }}
                             className="px-4 py-1.5 bg-wa-teal text-white rounded-lg text-sm font-medium hover:bg-wa-tealDark"
                         >
                             Message
@@ -148,7 +158,10 @@ const NotificationItem = ({ notification, onActionTaken }) => {
                     message: `added you to the group "${notification.metadata?.groupName || 'a group'}"`,
                     action: (
                         <button
-                            onClick={() => navigate(`/chat/${notification.metadata?.groupId}`)}
+                            onClick={async () => {
+                                await notificationFirebaseService.markAsRead(notification.id);
+                                navigate(`/chat/${notification.metadata?.groupId}`);
+                            }}
                             className="px-4 py-1.5 bg-wa-teal text-white rounded-lg text-sm font-medium hover:bg-wa-tealDark"
                         >
                             View Group
@@ -172,7 +185,10 @@ const NotificationItem = ({ notification, onActionTaken }) => {
             className={`flex items-start gap-3 p-4 hover:bg-gray-50 dark:hover:bg-wa-dark-hover transition-colors cursor-pointer ${
                 !notification.read ? 'bg-blue-50 dark:bg-blue-900/10' : ''
             }`}
-            onClick={() => navigate(`/profile/${actor.id}`)}
+            onClick={async () => {
+                await notificationFirebaseService.markAsRead(notification.id);
+                navigate(`/profile/${actor.id}`);
+            }}
         >
             {/* Avatar */}
             <img
@@ -220,16 +236,23 @@ const NotificationsPage = () => {
     const [notifications, setNotifications] = useState([]);
     const [loading, setLoading] = useState(true);
     const [unreadCount, setUnreadCount] = useState(0);
+    const [totalCount, setTotalCount] = useState(0);
 
     useEffect(() => {
         loadNotifications();
-        // Mark all as read when page is viewed
-        return () => {
-            if (unreadCount > 0) {
-                notificationFirebaseService.markAllAsRead(currentUser?.id).catch(err =>
+
+        // Mark all as read after viewing for a short time
+        // This ensures the user has actually seen the notifications
+        const markAsReadTimer = setTimeout(() => {
+            if (currentUser?.id) {
+                notificationFirebaseService.markAllAsRead(currentUser.id).catch(err =>
                     console.error('Failed to mark notifications as read:', err)
                 );
             }
+        }, 1500); // 1.5 second delay to ensure user is viewing the page
+
+        return () => {
+            clearTimeout(markAsReadTimer);
         };
     }, [currentUser?.id]);
 
@@ -242,6 +265,7 @@ const NotificationsPage = () => {
             if (result.success) {
                 setNotifications(result.notifications);
                 setUnreadCount(result.unreadCount);
+                setTotalCount(result.notifications.length);
             }
         } catch (error) {
             console.error('Failed to load notifications:', error);
@@ -263,9 +287,9 @@ const NotificationsPage = () => {
                     <ArrowLeft size={24} />
                 </button>
                 <h2 className="text-xl font-medium md:text-lg">Notifications</h2>
-                {unreadCount > 0 && (
+                {totalCount > 0 && (
                     <span className="ml-auto text-sm bg-wa-teal/10 text-wa-teal px-2 py-1 rounded-full">
-                        {unreadCount} unread
+                        {totalCount} {totalCount === 1 ? 'notification' : 'notifications'}
                     </span>
                 )}
             </div>
@@ -281,9 +305,9 @@ const NotificationsPage = () => {
                     </button>
                     <h1 className="text-xl font-medium text-[#111b21] dark:text-gray-100">Notifications</h1>
                 </div>
-                {unreadCount > 0 && (
+                {totalCount > 0 && (
                     <span className="text-sm text-gray-500 dark:text-gray-400">
-                        {unreadCount} unread
+                        {totalCount} {totalCount === 1 ? 'notification' : 'notifications'}
                     </span>
                 )}
             </div>

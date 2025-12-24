@@ -25,6 +25,7 @@ const NotificationsPage = lazy(() => import('../../features/notifications/compon
 const GroupSettings = lazy(() => import('../../features/groups/components/GroupSettings'));
 const GroupParticipants = lazy(() => import('../../features/groups/components/GroupParticipants'));
 const GroupPermissions = lazy(() => import('../../features/groups/components/GroupPermissions'));
+const JoinGroupPage = lazy(() => import('../../features/chat/components/JoinGroupPage'));
 
 import { useApp } from '../../shared/context/AppContext';
 import { useOnlineStatus } from '../../shared/hooks/useOnlineStatus';
@@ -68,6 +69,7 @@ const MobileLayout = () => {
         location.pathname === '/follow-requests' ||
         location.pathname === '/settings/blocked-users' ||
         location.pathname === '/notifications' ||
+        location.pathname.includes('/join/') ||
         location.pathname.startsWith('/group/');
 
     useEffect(() => {
@@ -101,6 +103,7 @@ const MobileLayout = () => {
                 <Suspense fallback={<LoadingFallback />}>
                     <Routes>
                         <Route path="/new-chat" element={<NewChat />} />
+                        <Route path="/join/:linkId" element={<JoinGroupPage />} />
                         <Route path="/archived" element={<ArchivedChats />} />
                         <Route path="/status/privacy" element={<StatusPrivacySettings />} />
                         <Route path="/profile/:userId" element={<UserProfile />} />

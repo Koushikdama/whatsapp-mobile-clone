@@ -1,18 +1,23 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { createPortal } from 'react-dom';
-import { Phone, Video, Mic, MicOff, VideoOff, Maximize2, Minimize2, PhoneOff, User as UserIcon, X, Smile } from 'lucide-react';
+import { Phone, Video, Mic, MicOff, VideoOff, Maximize2, Minimize2, PhoneOff, User as UserIcon, X, Smile, Monitor, PictureInPicture } from 'lucide-react';
 import { useCall } from '../context/CallContext';
 import { useApp } from '../../../shared/context/AppContext';
 import { useAvatarMode } from '../hooks/useAvatarMode';
+import IncomingCallNotification from './IncomingCallNotification';
 
 const CallOverlay = () => {
-    const { activeCall, endCall, minimizeCall, maximizeCall, toggleMute, toggleVideo } = useCall();
+    const { activeCall, incomingCall, localStream, remoteStream, isScreenSharing, isPiPMode, endCall, minimizeCall, maximizeCall, toggleMute, toggleVideo, startScreenShare, stopScreenShare, enterPiP } = useCall();
     const { users } = useApp();
     const [duration, setDuration] = useState(0);
 
     // Avatar Mode Hook
     const { isAvatarMode, toggleAvatarMode, canvasRef, videoRef, isLoading, avatarStream } = useAvatarMode();
+
+    // Video Refs for WebRTC streams
+    const localVideoRef = useRef(null);
+    const remoteVideoRef = useRef(null);
 
     // Dragging State
     const [position, setPosition] = useState(null);
@@ -148,6 +153,25 @@ const CallOverlay = () => {
         };
     }, []);
 
+    // Set remote video stream
+    useEffect(() => {
+        if (remoteVideoRef.current && remoteStream) {
+            remoteVideoRef.current.srcObject = remoteStream;
+        }
+    }, [remoteStream]);
+
+    // Set local video stream
+    useEffect(() => {
+        if (localVideoRef.current && localStream) {
+            localVideoRef.current.srcObject = localStream;
+        }
+    }, [localStream]);
+
+    // Show incoming call notification if there's an incoming call
+    if (incomingCall) {
+        return <IncomingCallNotification />;
+    }
+
     if (!activeCall) return null;
 
     const contact = users[activeCall.contactId];
@@ -190,11 +214,20 @@ const CallOverlay = () => {
 
                 {/* Minimized Content */}
                 <div className="relative aspect-video bg-gray-800 pointer-events-none">
-                    {activeCall.type === 'video' && activeCall.isVideoEnabled ? (
-                        <img src={`https://picsum.photos/seed/${contact?.id}/400/300`} className="w-full h-full object-cover opacity-80" alt="Video" />
+                    {activeCall.type === 'video' && activeCall.isVideoEnabled && remoteStream ? (
+                        <video
+                            ref={remoteVideoRef}
+                            autoPlay
+                            playsInline
+                            className="w-full h-full object-cover opacity-80"
+                        />
                     ) : (
                         <div className="w-full h-full flex items-center justify-center bg-gray-800">
-                            <img src={contact?.avatar} className="w-12 h-12 rounded-full opacity-60" alt="" />
+                                {contact?.avatar ? (
+                                    <img src={contact?.avatar} className="w-12 h-12 rounded-full opacity-60" alt="" />
+                                ) : (
+                                    <UserIcon className="w-12 h-12 text-gray-400 opacity-60" />
+                                )}
                         </div>
                     )}
 
@@ -236,13 +269,28 @@ const CallOverlay = () => {
             <div className="flex-1 relative overflow-hidden flex flex-col items-center justify-center">
                 {activeCall.type === 'video' && activeCall.isVideoEnabled ? (
                     <>
-                        {/* Remote Video (Mock) */}
-                        <img
-                            src={`https://picsum.photos/seed/${contact?.id}/800/1200`}
-                            className="absolute inset-0 w-full h-full object-cover opacity-60 blur-sm md:blur-0"
-                            alt="Background"
-                        />
-                        {/* "Self View" - Replaced by Avatar if Active */}
+                        {/* Remote Video Stream */}
+                        {remoteStream ? (
+                            <video
+                                ref={remoteVideoRef}
+                                autoPlay
+                                playsInline
+                                className="absolute inset-0 w-full h-full object-cover"
+                            />
+                        ) : (
+                            <div className="absolute inset-0 w-full h-full bg-gray-800 flex items-center justify-center">
+                                <div className="text-center">
+                                    {contact?.avatar ? (
+                                        <img src={contact.avatar} className="w-32 h-32 rounded-full mx-auto mb-4" alt="" />
+                                    ) : (
+                                        <UserIcon className="w-32 h-32 text-gray-400 mx-auto mb-4" />
+                                    )}
+                                    <p className="text-gray-400">Connecting...</p>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Local Video Preview (Self View) */}
                         <div className="absolute top-4 right-4 w-28 h-36 bg-black rounded-lg border border-gray-600 overflow-hidden shadow-lg z-20">
                             {isAvatarMode ? (
                                 <div className="w-full h-full relative">
@@ -251,16 +299,20 @@ const CallOverlay = () => {
                                             Loading...
                                         </div>
                                     )}
-                                    {/* Create a fresh canvas to render stream or just re-append the ref? 
-                                        Since we need to show it, we can't easily "show" the hidden canvas ref if it's hidden.
-                                        Actually, we can just remove 'hidden' class from the canvasRef above if we want to show it there,
-                                        OR, better, we use a simple Video element to show the 'avatarStream' we captured!
-                                        That proves the stream is working.
-                                    */}
                                     <VideoPreview stream={avatarStream} />
                                 </div>
+                            ) : localStream ? (
+                                <video
+                                    ref={localVideoRef}
+                                    autoPlay
+                                    playsInline
+                                    muted
+                                    className="w-full h-full object-cover"
+                                />
                             ) : (
-                                <img src="https://picsum.photos/seed/me/200/300" className="w-full h-full object-cover" alt="Me" />
+                                        <div className="w-full h-full bg-gray-700 flex items-center justify-center">
+                                            <UserIcon className="text-gray-500" size={32} />
+                                        </div>
                             )}
                         </div>
                     </>
@@ -271,7 +323,13 @@ const CallOverlay = () => {
                         {activeCall.status === 'ringing' && (
                             <div className="absolute w-64 h-64 bg-wa-teal/20 rounded-full animate-ping"></div>
                         )}
-                        <img src={contact?.avatar} className="w-32 h-32 rounded-full border-4 border-gray-700 z-10" alt={contact?.name} />
+                            {contact?.avatar ? (
+                                <img src={contact.avatar} className="w-32 h-32 rounded-full border-4 border-gray-700 z-10" alt={contact?.name} />
+                            ) : (
+                                <div className="w-32 h-32 rounded-full border-4 border-gray-700 bg-gray-700 flex items-center justify-center z-10">
+                                    <UserIcon size={64} className="text-gray-400" />
+                                </div>
+                            )}
                     </div>
                 )}
 
@@ -325,6 +383,38 @@ const CallOverlay = () => {
                             title="Avatar Mode"
                         >
                             <Smile size={24} />
+                        </button>
+                    )}
+
+                    {/* Screen Share Button */}
+                    {activeCall.type === 'video' && (
+                        <button
+                            onClick={isScreenSharing ? stopScreenShare : startScreenShare}
+                            className={`p-4 rounded-full transition-all ${isScreenSharing
+                                    ? 'bg-green-600 text-white shadow-[0_0_15px_rgba(22,163,74,0.5)]'
+                                    : 'bg-white/10 text-gray-400 hover:text-white'
+                                }`}
+                            disabled={activeCall.status === 'ended'}
+                            title={isScreenSharing ? 'Stop Sharing' : 'Share Screen'}
+                        >
+                            <Monitor size={24} />
+                        </button>
+                    )}
+
+                    {/* Picture-in-Picture Button */}
+                    {activeCall.type === 'video' && remoteStream && (
+                        <button
+                            onClick={() => {
+                                const remoteVideo = document.querySelector('video[autoplay]:not([muted])');
+                                if (remoteVideo && !isPiPMode) {
+                                    enterPiP(remoteVideo);
+                                }
+                            }}
+                            className="p-4 rounded-full bg-white/10 text-gray-400 hover:text-white transition-all"
+                            disabled={activeCall.status === 'ended' || isPiPMode}
+                            title="Picture-in-Picture"
+                        >
+                            <PictureInPicture size={24} />
                         </button>
                     )}
 

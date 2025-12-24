@@ -1,16 +1,18 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { Bell } from 'lucide-react';
 import { useApp } from '../context/AppContext';
-import notificationFirebaseService from '../../services/firebase/NotificationFirebaseService';
+import unifiedNotificationService from '../../services/UnifiedNotificationService';
 
 /**
  * NotificationBell Component
  * Displays a bell icon with unread notification badge
  * Click to navigate to notifications page
+ * Uses real-time updates to stay in sync
  */
 const NotificationBell = ({ className = '' }) => {
     const navigate = useNavigate();
+    const location = useLocation();
     const { currentUser } = useApp();
     const [unreadCount, setUnreadCount] = useState(0);
 
@@ -20,19 +22,36 @@ const NotificationBell = ({ className = '' }) => {
         // Load initial unread count
         loadUnreadCount();
 
-        // Reload every 30 seconds
-        const interval = setInterval(() => {
-            loadUnreadCount();
-        }, 30000);
+        // Subscribe to real-time notification updates
+        const unsubscribe = unifiedNotificationService.subscribeToNotifications(
+            currentUser.id,
+            (data) => {
+                // Update badge with unread count
+                setUnreadCount(data.unreadCount);
+                console.log(`🔔 Notification badge updated: ${data.unreadCount} unread`);
+            }
+        );
 
-        return () => clearInterval(interval);
+        return () => {
+            if (unsubscribe) {
+                unsubscribe();
+            }
+        };
     }, [currentUser?.id]);
+
+    // Reload count when navigating away from notifications page
+    useEffect(() => {
+        // If we're leaving the notifications page, reload count
+        if (currentUser?.id && !location.pathname.includes('/notifications')) {
+            loadUnreadCount();
+        }
+    }, [location.pathname, currentUser?.id]);
 
     const loadUnreadCount = async () => {
         if (!currentUser?.id) return;
 
         try {
-            const result = await notificationFirebaseService.getUnreadCount(currentUser.id);
+            const result = await unifiedNotificationService.getUnreadCount(currentUser.id);
             if (result.success) {
                 setUnreadCount(result.count);
             }

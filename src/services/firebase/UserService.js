@@ -304,6 +304,68 @@ class UserService extends FirebaseService {
     }
 
     /**
+     * Save FCM token for a user
+     * @param {string} userId - User ID
+     * @param {string} fcmToken - FCM registration token
+     */
+    async saveFcmToken(userId, fcmToken) {
+        try {
+            if (!userId || !fcmToken) {
+                return { success: false, error: 'userId and fcmToken are required' };
+            }
+
+            const userRef = doc(db, this.collectionName, userId);
+            await updateDoc(userRef, {
+                fcmToken,
+                updatedAt: serverTimestamp()
+            });
+
+            console.log(`✅ FCM token saved for user ${userId}`);
+            return { success: true };
+        } catch (error) {
+            console.error('[UserService] Save FCM token error:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Get FCM token for a user
+     * @param {string} userId - User ID
+     */
+    async getFcmToken(userId) {
+        try {
+            const userResult = await this.getUser(userId);
+            if (userResult.success && userResult.user?.fcmToken) {
+                return { success: true, token: userResult.user.fcmToken };
+            }
+            return { success: false, error: 'No FCM token found' };
+        } catch (error) {
+            console.error('[UserService] Get FCM token error:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
+     * Remove FCM token for a user
+     * @param {string} userId - User ID
+     */
+    async removeFcmToken(userId) {
+        try {
+            const userRef = doc(db, this.collectionName, userId);
+            await updateDoc(userRef, {
+                fcmToken: null,
+                updatedAt: serverTimestamp()
+            });
+
+            console.log(`✅ FCM token removed for user ${userId}`);
+            return { success: true };
+        } catch (error) {
+            console.error('[UserService] Remove FCM token error:', error);
+            return { success: false, error: error.message };
+        }
+    }
+
+    /**
      * Subscribe to online users
      */
     subscribeToOnlineUsers(callback, onError) {
